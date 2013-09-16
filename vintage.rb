@@ -18,6 +18,7 @@ module Vintage
     import javax.swing.JFrame
     import java.awt.event.KeyEvent
     import java.awt.event.KeyListener
+    import java.awt.event.KeyAdapter
 
 
     class Panel < JPanel
@@ -25,6 +26,12 @@ module Vintage
 
       def paint(g)
         interface.render(g)
+      end
+    end
+
+    class KeyCapture < KeyAdapter
+      def keyPressed(e)
+        p e.getKeyCode
       end
     end
 
@@ -38,24 +45,13 @@ module Vintage
                                            SCALE * DIMENSIONS))
 
       @panel.setFocusable(true)
-      @panel.addKeyListener(self)
+      @panel.addKeyListener(KeyCapture.new)
 
       frame = JFrame.new
       frame.add(@panel)
       frame.pack
       frame.show
     end
-
-    def key_pressed(e)
-      p e.get_key_code
-    end
-
-    def key_typed(e)
-    end
-
-    def key_released(e)
-    end
-
 
     def update(pixels)
       @pixels = pixels
