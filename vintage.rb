@@ -1,6 +1,53 @@
 module Vintage
-  Pixel = Struct.new(:x, :y, :color)
+  class Processor
+    OPCODES = { 0xa9 => :LDA, 0x8D => :STA }
 
+    def initialize(display)
+      @acc     = 0
+      @memory  = {}
+      @display = display
+    end
+
+    attr_reader :acc, :memory
+
+    def [](key)
+      @memory[key]
+    end
+
+    def []=(key, value)
+      @memory[key] = value
+
+      if (0x0200...0x05ff).include?(key)
+        @display.update(key, value) 
+      end
+    end
+
+    def run(codes)
+      loop do
+        return if codes.empty?
+
+        op = OPCODES[codes.shift]
+
+        case op
+        when :LDA
+          @acc = codes.shift
+        when :STA
+          self[int16(codes.shift(2))] = @acc
+        else
+          raise NotImplementedError
+        end
+      end
+    end
+
+    private
+
+    def int16(bytes)
+      bytes.pack("c*").unpack("v").first
+    end
+  end
+end
+
+module Vintage
   class Visualization
     include Java
     
@@ -19,6 +66,10 @@ module Vintage
     import java.awt.event.KeyEvent
     import java.awt.event.KeyListener
     import java.awt.event.KeyAdapter
+
+    Pixel = Struct.new(:x, :y, :color)
+    Colors = [:black,  :white, :red,   :cyan,  :purple, :green, :blue,  :yellow, 
+              :orange, :white, :white, :white, :white,  :white, :white, :white ]
 
 
     class Panel < JPanel
@@ -53,8 +104,10 @@ module Vintage
       frame.show
     end
 
-    def update(pixels)
-      @pixels = pixels
+    def update(key, value)
+      index = key - 0x0200
+
+      @pixels.push(Pixel.new(index % 32, index / 32, Colors[value]))
       @panel.repaint
     end
 
@@ -86,21 +139,15 @@ module Vintage
       bg.dispose
     end
   end
+
 end
-
-
-Thread.abort_on_exception = true
 
 vis = Vintage::Visualization.new
 
-Thread.new do
-  pixels = []
-  loop do
-    pixels += 20.times.map { Vintage::Pixel.new(rand(32), rand(32), [:red, :green, :blue, :yellow].sort_by { rand }.first) }
-    vis.update(pixels)
-    sleep 0.03
-  end
-end
+processor = Vintage::Processor.new(vis)
+processor.run([0xA9, 0x01, 0x8D, 0x00, 0x02, 0xA9, 0x05, 0x8d, 0x01, 0x02,
+               0xA9, 0x08, 0x8d, 0x02, 0x02])
 
-sleep
-
+require "rubygems"
+require "pry"
+binding.pry
