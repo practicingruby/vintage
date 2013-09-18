@@ -1,4 +1,37 @@
 module Vintage
+  class Assembler
+    def self.load(filename)
+      lookup = Processor::OPCODES.invert
+
+      src = File.read(filename)
+      bytecode = []
+
+      src.each_line.with_index do |line, i|
+        begin
+          case line
+          when /LDA/
+            bytecode << lookup[:LDA]
+            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /STA/
+            bytecode << lookup[:STA]
+            
+            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
+
+            bytecode << md[2].to_i(16)
+            bytecode << md[1].to_i(16)
+          else
+            puts line
+            raise NotImplementedError
+          end
+        rescue
+          raise "Parse error on line #{i + 1}:\n  #{line}"
+        end
+      end
+
+     bytecode 
+    end
+  end
+
   class Processor
     OPCODES = { 0xa9 => :LDA, 0x8D => :STA }
 
@@ -145,7 +178,7 @@ end
 vis = Vintage::Visualization.new
 
 processor = Vintage::Processor.new(vis)
-processor.run(File.binread("test/data/pixels.dump").unpack("C*"))
+processor.run(Vintage::Assembler.load("test/data/pixels.asm"))
 
 #require "rubygems"
 #require "pry"
