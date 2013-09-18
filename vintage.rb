@@ -145,9 +145,8 @@ end
 vis = Vintage::Visualization.new
 
 processor = Vintage::Processor.new(vis)
-processor.run([0xA9, 0x01, 0x8D, 0x00, 0x02, 0xA9, 0x05, 0x8d, 0x01, 0x02,
-               0xA9, 0x08, 0x8d, 0x02, 0x02])
+processor.run(File.binread("test/data/pixels.dump").unpack("C*"))
 
-require "rubygems"
-require "pry"
-binding.pry
+#require "rubygems"
+#require "pry"
+#binding.pry
