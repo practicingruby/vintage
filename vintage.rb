@@ -20,11 +20,10 @@ module Vintage
             bytecode << md[2].to_i(16)
             bytecode << md[1].to_i(16)
           else
-            puts line
-            raise NotImplementedError
+            raise
           end
         rescue
-          raise "Parse error on line #{i + 1}:\n  #{line}"
+          raise "Error on line #{i + 1}:\n  #{line}"
         end
       end
 
@@ -33,15 +32,17 @@ module Vintage
   end
 
   class Processor
-    OPCODES = { 0xa9 => :LDA, 0x8D => :STA }
+    OPCODES = { 0xa9 => :LDA, 0x8D => :STA, 0xAA => :TAX, 
+                0xE8 => :INX, 0x69 => :ADC, 0x00 => :BRK }
 
     def initialize(display)
       @acc     = 0
+      @x       = 0
       @memory  = {}
       @display = display
     end
 
-    attr_reader :acc, :memory
+    attr_reader :acc, :x, :memory
 
     def [](key)
       @memory[key]
@@ -59,15 +60,25 @@ module Vintage
       loop do
         return if codes.empty?
 
-        op = OPCODES[codes.shift]
-
+        code = codes.shift
+        op = OPCODES[code]
+        
+        # FIXME: Do without the case statement.
         case op
         when :LDA
           @acc = codes.shift
         when :STA
           self[int16(codes.shift(2))] = @acc
+        when :TAX
+          @x = @acc
+        when :INX
+          @x = (@x + 1) % 256
+        when :ADC
+          @acc = (@acc + codes.shift) % 256
+        when :BRK
+          return
         else
-          raise NotImplementedError
+          raise LoadError, "No operator matches code: #{'%.2x' % code.inspect}"
         end
       end
     end
@@ -81,6 +92,10 @@ module Vintage
 end
 
 module Vintage
+  class NullVisualization
+    def self.update(*)
+    end
+  end
   class Visualization
     include Java
     
@@ -174,11 +189,6 @@ module Vintage
   end
 
 end
-
-vis = Vintage::Visualization.new
-
-processor = Vintage::Processor.new(vis)
-processor.run(Vintage::Assembler.load("test/data/pixels.asm"))
 
 #require "rubygems"
 #require "pry"
