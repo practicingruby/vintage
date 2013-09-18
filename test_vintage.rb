@@ -25,7 +25,9 @@ processor = Vintage::Processor.new(Vintage::NullVisualization)
 assert_equal(processor.x, 0)
 assert_equal(processor.acc, 0)
 
-processor.run(bytecode("arithmetic"))
+code = Vintage::Assembler.load("test/data/arithmetic.asm")
+
+processor.run(code)
 
 assert_equal(0xc1, processor.x)
 assert_equal(0x84, processor.acc)

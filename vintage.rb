@@ -12,6 +12,15 @@ module Vintage
           when /LDA/
             bytecode << lookup[:LDA]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /TAX/
+            bytecode << lookup[:TAX]
+          when /INX/
+            bytecode << lookup[:INX]
+          when /ADC/
+            bytecode << lookup[:ADC]
+            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /BRK/
+            bytecode << lookup[:BRK]
           when /STA/
             bytecode << lookup[:STA]
             
