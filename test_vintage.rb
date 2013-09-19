@@ -55,6 +55,12 @@ describe "Easy 6502" do
     processor.acc.must_equal(0)
   end
 
+  example "Branching #1" do
+    processor.run([0xa2, 0x08, 0xca, 0x8e, 0x00,
+                   0x02, 0xe0, 0x03, 0xd0, 0xf8,
+                   0x8e, 0x01, 0x02, 0x00])
+  end
+
   def assemble(string)
     Vintage::Assembler.load(string.strip)
   end

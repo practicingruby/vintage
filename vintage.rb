@@ -52,8 +52,10 @@ module Vintage
 
   class Processor
     OPCODES = { 0xa9 => :LDA, 0x8D => :STA_A, 0xAA => :TAX, 
-                0xE8 => :INX, 0x69 => :ADC_I,   0x00 => :BRK,
-                0x85 => :STA_Z, 0x65 => :ADC_Z}
+                0xE8 => :INX, 0x69 => :ADC_I, 0x00 => :BRK,
+                0x85 => :STA_Z, 0x65 => :ADC_Z, 0xa2 => :LDX,
+                0xCA => :DEX, 0x8E => :STX_A, 0xE0 => :CPX_I,
+                0xD0 => :BNE}
 
     def initialize(display)
       @acc     = 0
@@ -89,18 +91,29 @@ module Vintage
         case op
         when :LDA
           @acc = codes.shift
+        when :LDX
+          @x = codes.shift
         when :STA_A
           self[int16(codes.shift(2))] = @acc
+        when :STX_A
+          self[int16(codes.shift(2))] = @x
         when :STA_Z
           self[codes.shift] = @acc
         when :TAX
           @x = @acc
         when :INX
           @x = (@x + 1) % 256
+        when :DEX
+          @x = (@x - 1) % 256
+        when :CPX_I
+          @x == codes.shift ? @z = 1 : @z = 0
         when :ADC_I
           @acc = (@acc + codes.shift) % 256
         when :ADC_Z
           @acc = (@acc + self[codes.shift]) % 256
+        when :BNE
+          warn "not actually implemented"
+          codes.shift
         when :BRK
           return
         else
