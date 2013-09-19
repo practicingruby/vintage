@@ -25,8 +25,8 @@ describe "Easy 6502" do
   end
 
   example "Instructions #1" do
-    assert_equal(processor.x, 0)
-    assert_equal(processor.acc, 0)
+    processor.x.must_equal(0)
+    processor.acc.must_equal(0)
 
     code = assemble '
       LDA #$c0
