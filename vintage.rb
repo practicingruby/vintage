@@ -1,4 +1,22 @@
 module Vintage
+  class Storage
+    def initialize(&callback)
+      @memory         = {}
+      @write_callback = callback
+    end
+
+    def [](address)
+      @memory[address]
+    end
+
+
+    def []=(address, value)
+      @memory[address] = value
+
+      @write_callback.call(address, value) if @write_callback
+    end
+  end
+
   class Assembler
     def self.load_file(filename)
       load(File.read(filename))
@@ -57,28 +75,15 @@ module Vintage
                 0xCA => :DEX, 0x8E => :STX_A, 0xE0 => :CPX_I,
                 0xD0 => :BNE}
 
-    def initialize(display)
+    def initialize(memory)
       @acc     = 0
       @x       = 0
       @z       = 0 # FIXME: Move this all into a single byte flag array later
       @c       = 0 # ........................................................
-      @memory  = {}
-      @display = display
+      @memory  = memory
     end
 
     attr_reader :acc, :x, :memory, :z, :c
-
-    def [](key)
-      @memory[key]
-    end
-
-    def []=(key, value)
-      @memory[key] = value
-
-      if (0x0200...0x05ff).include?(key)
-        @display.update(key, value) 
-      end
-    end
 
     def run(codes)
       loop do
@@ -94,11 +99,11 @@ module Vintage
         when :LDX
           @x = codes.shift
         when :STA_A
-          self[int16(codes.shift(2))] = @acc
+          @memory[int16(codes.shift(2))] = @acc
         when :STX_A
-          self[int16(codes.shift(2))] = @x
+          @memory[int16(codes.shift(2))] = @x
         when :STA_Z
-          self[codes.shift] = @acc
+          @memory[codes.shift] = @acc
         when :TAX
           @x = @acc
         when :INX
@@ -110,7 +115,7 @@ module Vintage
         when :ADC_I
           @acc = (@acc + codes.shift) % 256
         when :ADC_Z
-          @acc = (@acc + self[codes.shift]) % 256
+          @acc = (@acc + @memory[codes.shift]) % 256
         when :BNE
           warn "not actually implemented"
           codes.shift

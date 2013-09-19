@@ -9,7 +9,7 @@ require_relative "vintage"
 MiniTest::Spec.singleton_class.module_eval { alias_method :example, :it }
 
 describe "Easy 6502" do
-  let(:processor) { Vintage::Processor.new(Vintage::NullVisualization) }
+  let(:processor) { Vintage::Processor.new(Vintage::Storage.new) }
 
   example "First Program" do
     code = assemble '
@@ -51,7 +51,7 @@ describe "Easy 6502" do
 
     processor.run(code)
 
-    processor[0x01].must_equal(0x80)
+    processor.memory[0x01].must_equal(0x80)
     processor.acc.must_equal(0)
   end
 
@@ -59,6 +59,9 @@ describe "Easy 6502" do
     processor.run([0xa2, 0x08, 0xca, 0x8e, 0x00,
                    0x02, 0xe0, 0x03, 0xd0, 0xf8,
                    0x8e, 0x01, 0x02, 0x00])
+
+    processor.memory[0x200].must_equal(0x03)
+    processor.memory[0x201].must_equal(0x03)
   end
 
   def assemble(string)
