@@ -1,14 +1,35 @@
 module Vintage
   class Storage
+    PROGRAM_OFFSET = 0x0600
+
     def initialize(&callback)
-      @memory         = {}
-      @write_callback = callback
+      @memory          = {}
+      @write_callback  = callback
+      @program_counter = PROGRAM_OFFSET
     end
+
+    attr_accessor :program_counter
 
     def [](address)
       @memory[address]
     end
 
+    def load(bytecode)
+      index = PROGRAM_OFFSET
+
+      bytecode.each_with_index { |c,i| @memory[index+i] = c }
+    end
+
+    def shift(n=1)
+      bytes = []
+
+      n.times do
+        bytes << @memory[@program_counter]
+        @program_counter += 1
+      end
+
+      n == 1 ? bytes.first : bytes
+    end
 
     def []=(address, value)
       @memory[address] = value
@@ -85,25 +106,27 @@ module Vintage
 
     attr_reader :acc, :x, :memory, :z, :c
 
-    def run(codes)
-      loop do
-        return if codes.empty?
+    def run(bytecode)
+      @memory.load(bytecode)
 
-        code = codes.shift
+      loop do
+        code = @memory.shift
+
+        return unless code
         op = OPCODES[code]
         
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
         when :LDA
-          @acc = codes.shift
+          @acc = @memory.shift
         when :LDX
-          @x = codes.shift
+          @x = @memory.shift
         when :STA_A
-          @memory[int16(codes.shift(2))] = @acc
+          @memory[int16(@memory.shift(2))] = @acc
         when :STX_A
-          @memory[int16(codes.shift(2))] = @x
+          @memory[int16(@memory.shift(2))] = @x
         when :STA_Z
-          @memory[codes.shift] = @acc
+          @memory[@memory.shift] = @acc
         when :TAX
           @x = @acc
         when :INX
@@ -111,14 +134,23 @@ module Vintage
         when :DEX
           @x = (@x - 1) % 256
         when :CPX_I
-          @x == codes.shift ? @z = 1 : @z = 0
+          @x == @memory.shift ? @z = 1 : @z = 0
         when :ADC_I
-          @acc = (@acc + codes.shift) % 256
+          @acc = (@acc + @memory.shift) % 256
         when :ADC_Z
-          @acc = (@acc + @memory[codes.shift]) % 256
+          @acc = (@acc + @memory[@memory.shift]) % 256
         when :BNE
-          warn "not actually implemented"
-          codes.shift
+          if @z == 0
+            offset = @memory.shift
+
+            if offset <= 0x80
+              @memory.program_counter += offset
+            else
+              @memory.program_counter -= (0xff - offset + 1)
+            end
+          else
+            @memory.shift
+          end
         when :BRK
           return
         else
