@@ -1,33 +1,65 @@
+require "minitest/autorun"
+
 require_relative "vintage"
 
-def bytecode(filename)
-  File.binread("test/data/#{filename}.dump").unpack("C*")
-end
+# Test cases below come from the examples in:
+# http://skilldrick.github.io/easy6502/#first-program
 
-def assert_equal(a,b)
-  if a == b
-    print "."
-  else
-    abort "\n\nFAIL -- Didn't expect #{b.inspect}... expected #{a.inspect}"
+# Use the word "example" instead of it throughout -- TODO: Move into test helper
+MiniTest::Spec.singleton_class.module_eval { alias_method :example, :it }
+
+describe "Easy 6502" do
+  let(:processor) { Vintage::Processor.new(Vintage::NullVisualization) }
+
+  example "First Program" do
+    code = assemble '
+      LDA #$01
+      STA $0200
+      LDA #$05
+      STA $0201
+      LDA #$08
+      STA $0202
+    '
+
+    bytecode("pixels").must_equal(code)
+  end
+
+  example "Instructions #1" do
+    assert_equal(processor.x, 0)
+    assert_equal(processor.acc, 0)
+
+    code = assemble '
+      LDA #$c0
+      TAX
+      INX
+      ADC #$c4
+      BRK
+    '
+
+    processor.run(code)
+
+    processor.x.must_equal(0xC1)
+    processor.acc.must_equal(0x84)
+  end
+
+  example "Instructions #2" do
+    code = assemble '
+      LDA #$80
+      STA $01
+      ADC $01
+    '
+
+    processor.run(code)
+
+    processor[0x01].must_equal(0x80)
+    processor.acc.must_equal(0)
+  end
+
+  def assemble(string)
+    Vintage::Assembler.load(string.strip)
+  end
+
+  def bytecode(filename)
+    File.binread("test/data/#{filename}.dump").unpack("C*")
   end
 end
-
-# -- test pixels from assembly to bytecode
-
-assembled = Vintage::Assembler.load("test/data/pixels.asm")
-
-assert_equal(bytecode("pixels"), assembled)
-
-## -- test arithmetic from bytecode to processor state
-
-processor = Vintage::Processor.new(Vintage::NullVisualization)
-
-assert_equal(processor.x, 0)
-assert_equal(processor.acc, 0)
-
-code = Vintage::Assembler.load("test/data/arithmetic.asm")
-
-processor.run(code)
-
-assert_equal(0xc1, processor.x)
-assert_equal(0x84, processor.acc)

@@ -1,9 +1,12 @@
 module Vintage
   class Assembler
-    def self.load(filename)
+    def self.load_file(filename)
+      load(File.read(filename))
+    end
+
+    def self.load(src)
       lookup = Processor::OPCODES.invert
 
-      src = File.read(filename)
       bytecode = []
 
       src.each_line.with_index do |line, i|
@@ -16,18 +19,25 @@ module Vintage
             bytecode << lookup[:TAX]
           when /INX/
             bytecode << lookup[:INX]
-          when /ADC/
-            bytecode << lookup[:ADC]
+          when /ADC #/
+            bytecode << lookup[:ADC_I]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /ADC \$/
+            bytecode << lookup[:ADC_Z]
+            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
           when /BRK/
             bytecode << lookup[:BRK]
-          when /STA/
-            bytecode << lookup[:STA]
+          when /STA \$\h{4}/
+            bytecode << lookup[:STA_A]
             
             md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
 
             bytecode << md[2].to_i(16)
             bytecode << md[1].to_i(16)
+          when /STA \$\h{2}/
+            bytecode << lookup[:STA_Z]
+
+            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
           else
             raise
           end
@@ -41,17 +51,20 @@ module Vintage
   end
 
   class Processor
-    OPCODES = { 0xa9 => :LDA, 0x8D => :STA, 0xAA => :TAX, 
-                0xE8 => :INX, 0x69 => :ADC, 0x00 => :BRK }
+    OPCODES = { 0xa9 => :LDA, 0x8D => :STA_A, 0xAA => :TAX, 
+                0xE8 => :INX, 0x69 => :ADC_I,   0x00 => :BRK,
+                0x85 => :STA_Z, 0x65 => :ADC_Z}
 
     def initialize(display)
       @acc     = 0
       @x       = 0
+      @z       = 0 # FIXME: Move this all into a single byte flag array later
+      @c       = 0 # ........................................................
       @memory  = {}
       @display = display
     end
 
-    attr_reader :acc, :x, :memory
+    attr_reader :acc, :x, :memory, :z, :c
 
     def [](key)
       @memory[key]
@@ -72,18 +85,22 @@ module Vintage
         code = codes.shift
         op = OPCODES[code]
         
-        # FIXME: Do without the case statement.
+        # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
         when :LDA
           @acc = codes.shift
-        when :STA
+        when :STA_A
           self[int16(codes.shift(2))] = @acc
+        when :STA_Z
+          self[codes.shift] = @acc
         when :TAX
           @x = @acc
         when :INX
           @x = (@x + 1) % 256
-        when :ADC
+        when :ADC_I
           @acc = (@acc + codes.shift) % 256
+        when :ADC_Z
+          @acc = (@acc + self[codes.shift]) % 256
         when :BRK
           return
         else
