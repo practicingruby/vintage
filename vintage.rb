@@ -121,21 +121,40 @@ module Vintage
   end
 
   class Processor
-    OPCODES = { 0xa9 => :LDA, 0x8D => :STA_A, 0xAA => :TAX, 
-                0xE8 => :INX, 0x69 => :ADC_I, 0x00 => :BRK,
-                0x85 => :STA_Z, 0x65 => :ADC_Z, 0xa2 => :LDX,
-                0xCA => :DEX, 0x8E => :STX_A, 0xE0 => :CPX_I,
-                0xD0 => :BNE}
+    OPCODES = { 0xa9 => :LDA, 
+                0x8D => :STA_A,
+                0xAA => :TAX, 
+                0xE8 => :INX, 
+                0xC8 => :INY,
+                0x69 => :ADC_I, 
+                0x00 => :BRK,
+                0x85 => :STA_Z, 
+                0x65 => :ADC_Z, 
+                0xa2 => :LDX,
+                0xCA => :DEX, 
+                0x8E => :STX_A, 
+                0xE0 => :CPX_I,
+                0xC0 => :CPY_I,
+                0xD0 => :BNE, 
+                0xA0 => :LDY, 
+                0x8A => :TXA,
+                0x99 => :STA_AY,
+                0x48 => :PHA,
+                0x68 => :PLA }
+
+    STACK_OFFSET = 0x0100
 
     def initialize(memory)
       @acc     = 0
       @x       = 0
+      @y       = 0
+      @sp      = 255
       @z       = 0 # FIXME: Move this all into a single byte flag array later
       @c       = 0 # ........................................................
       @memory  = memory
     end
 
-    attr_reader :acc, :x, :memory, :z, :c
+    attr_reader :acc, :x, :y, :memory, :z, :c
 
     def run(bytecode)
       @memory.load(bytecode)
@@ -152,20 +171,30 @@ module Vintage
           @acc = @memory.shift
         when :LDX
           @x = @memory.shift
+        when :LDY
+          @y = @memory.shift
         when :STA_A
           @memory[int16(@memory.shift(2))] = @acc
+        when :STA_AY
+          @memory[int16(@memory.shift(2)) + y] = @acc 
         when :STX_A
           @memory[int16(@memory.shift(2))] = @x
         when :STA_Z
           @memory[@memory.shift] = @acc
         when :TAX
           @x = @acc
+        when :TXA
+          @acc = @x
         when :INX
           @x = (@x + 1) % 256
+        when :INY
+          @y = (@y + 1) % 256
         when :DEX
           @x = (@x - 1) % 256
         when :CPX_I
           @x == @memory.shift ? @z = 1 : @z = 0
+        when :CPY_I
+          @y == @memory.shift ? @z = 1 : @z = 0
         when :ADC_I
           @acc = (@acc + @memory.shift) % 256
         when :ADC_Z
@@ -182,6 +211,12 @@ module Vintage
           else
             @memory.shift
           end
+        when :PHA
+          @memory[STACK_OFFSET + @sp] = @acc
+          @sp -= 1
+        when :PLA
+          @sp += 1
+          @acc = @memory[STACK_OFFSET + @sp]
         when :BRK
           return
         else
@@ -206,7 +241,7 @@ module Vintage
   class Visualization
     include Java
     
-    SCALE = 16
+    SCALE = 12
     DIMENSIONS = 32
 
     import java.awt.Color
@@ -223,8 +258,10 @@ module Vintage
     import java.awt.event.KeyAdapter
 
     Pixel = Struct.new(:x, :y, :color)
-    Colors = [:black,  :white, :red,   :cyan,  :purple, :green, :blue,  :yellow, 
-              :orange, :white, :white, :white, :white,  :white, :white, :white ]
+    
+    # FIXME: Still not 100% compatible w. Easy6502 colors
+    Colors = [:black,  :white, :red,   :cyan,  :magenta, :green, :blue,  :yellow, 
+              :orange, :pink, :red, :darkGray, :gray,  :green, :blue, :lightGray ]
 
 
     class Panel < JPanel
@@ -260,9 +297,7 @@ module Vintage
     end
 
     def update(key, value)
-      index = key - 0x0200
-
-      @pixels.push(Pixel.new(index % 32, index / 32, Colors[value]))
+      @pixels.push(Pixel.new(key % 32, (key - 0x200) / 32, Colors[value]))
       @panel.repaint
     end
 
