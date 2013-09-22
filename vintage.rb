@@ -50,65 +50,82 @@ module Vintage
       bytecode = []
 
       src.each_line.with_index do |line, i|
-        begin
-          case line
-          when /\s*(.*):\s*\Z/
-            labels[$1] = bytecode.count
-          when /LDA/
-            bytecode << lookup[:LDA]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /LDX/
-            bytecode << lookup[:LDX]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /TAX/
-            bytecode << lookup[:TAX]
-          when /INX/
-            bytecode << lookup[:INX]
-          when /DEX/
-            bytecode << lookup[:DEX]
-          when /CPX/
-            bytecode << lookup[:CPX_I]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /BNE (.*)\s*\Z/
-            bytecode << lookup[:BNE]
-            bytecode << $1
-          when /ADC #/
-            bytecode << lookup[:ADC_I]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /ADC \$/
-            bytecode << lookup[:ADC_Z]
-            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /STA \$\h{4}/
-            bytecode << lookup[:STA_A]
-            
-            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
+        case line
+        when /\s*(.*):\s*\Z/
+          labels[$1] = bytecode.count
+        when /LDA/
+          bytecode << lookup[:LDA]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /LDX/
+          bytecode << lookup[:LDX]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /LDY/
+          bytecode << lookup[:LDY]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /TAX/
+          bytecode << lookup[:TAX]
+        when /TXA/
+          bytecode << lookup[:TXA]
+        when /INX/
+          bytecode << lookup[:INX]
+        when /INY/
+          bytecode << lookup[:INY]
+        when /DEX/
+          bytecode << lookup[:DEX]
+        when /CPX/
+          bytecode << lookup[:CPX_I]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /CPY/
+          bytecode << lookup[:CPY_I]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /BNE (.*)\s*\Z/
+          bytecode << lookup[:BNE]
+          bytecode << $1.strip
+        when /ADC #/
+          bytecode << lookup[:ADC_I]
+          bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /ADC \$/
+          bytecode << lookup[:ADC_Z]
+          bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /STA \$\h{4}\s*,\s*Y/
+           bytecode << lookup[:STA_AY]
+          
+           md = line.match(/\$(\h{2})(\h{2})\s*,\s*Y\s*\Z/)
 
-            bytecode << md[2].to_i(16)
-            bytecode << md[1].to_i(16)
-          when /STX \$\h{4}/
-            bytecode << lookup[:STX_A]
-            
-            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
+           bytecode << md[2].to_i(16)
+           bytecode << md[1].to_i(16)
+        when /PHA/
+          bytecode << lookup[:PHA]
+        when /PLA/
+          bytecode << lookup[:PLA]
+        when /STA \$\h{4}/
+          bytecode << lookup[:STA_A]
+          
+          md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
 
-            bytecode << md[2].to_i(16)
-            bytecode << md[1].to_i(16)
-          when /STA \$\h{2}/
-            bytecode << lookup[:STA_Z]
+          bytecode << md[2].to_i(16)
+          bytecode << md[1].to_i(16)
+        when /STX \$\h{4}/
+          bytecode << lookup[:STX_A]
+          
+          md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
 
-            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /BRK/
-            bytecode << lookup[:BRK]
-          else
-            raise
-          end
-        rescue
-          raise "Error on line #{i + 1}:\n  #{line}"
+          bytecode << md[2].to_i(16)
+          bytecode << md[1].to_i(16)
+        when /STA \$\h{2}/
+          bytecode << lookup[:STA_Z]
+
+          bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
+        when /BRK/
+          bytecode << lookup[:BRK]
+        else
+          raise "Syntax Error on line #{i + 1}:\n  #{line}"
         end
       end
 
       bytecode.map.with_index do |c,i| 
         next c unless String === c
-          
+
         # FIXME: Possibly wrong, come back to it later
         offset = labels[c] - i
         if offset < 0
