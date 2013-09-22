@@ -95,13 +95,30 @@ describe "Easy 6502" do
 
     processor.run(code)
 
-    (0..15).each do |i|
+    (0..0x0f).each do |i|
       processor.memory[0x0200 + i].must_equal(i)
     end
 
-    (16..31).each do |i|
+    (0x10..0x1f).each do |i|
       processor.memory[0x200 + i].must_equal(31 - i)
     end
+  end
+
+
+  example "Jump" do
+    code = assemble '
+      LDA #$03
+      JMP there
+      BRK
+      BRK
+      BRK
+    there:
+      STA $0200
+    '
+
+    processor.run(code)
+
+    processor.memory[0x0200].must_equal(0x03)
   end
 
   def assemble(string)

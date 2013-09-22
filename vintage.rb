@@ -81,6 +81,9 @@ module Vintage
         when /BNE (.*)\s*\Z/
           bytecode << lookup[:BNE]
           bytecode << $1.strip
+        when /JMP (.*)\s*\Z/
+          bytecode << lookup[:JMP]
+          bytecode << $1.strip
         when /ADC #/
           bytecode << lookup[:ADC_I]
           bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
@@ -123,15 +126,19 @@ module Vintage
         end
       end
 
-      bytecode.map.with_index do |c,i| 
+      # FIXME: Possibly wrong, come back to it later
+      bytecode.flat_map.with_index do |c,i| 
         next c unless String === c
 
-        # FIXME: Possibly wrong, come back to it later
-        offset = labels[c] - i
-        if offset < 0
-          255 + offset
+        if bytecode[i - 1] == lookup[:BNE]
+          offset = labels[c] - i
+          if offset < 0
+            255 + offset
+          else
+            offset 
+          end
         else
-          offset 
+          [labels[c] + 1, 0x06]
         end
       end
     end
@@ -157,7 +164,8 @@ module Vintage
                 0x8A => :TXA,
                 0x99 => :STA_AY,
                 0x48 => :PHA,
-                0x68 => :PLA }
+                0x68 => :PLA,
+                0x4C => :JMP }
 
     STACK_OFFSET = 0x0100
 
@@ -234,6 +242,8 @@ module Vintage
         when :PLA
           @sp += 1
           @acc = @memory[STACK_OFFSET + @sp]
+        when :JMP
+          @memory.program_counter = int16(@memory.shift(2))
         when :BRK
           return
         else
