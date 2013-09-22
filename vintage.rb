@@ -51,23 +51,41 @@ module Vintage
       src.each_line.with_index do |line, i|
         begin
           case line
+          when /\s*(.*):\s*\Z/
+            warn "label thrown out: #{$1}"
           when /LDA/
             bytecode << lookup[:LDA]
+            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /LDX/
+            bytecode << lookup[:LDX]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
           when /TAX/
             bytecode << lookup[:TAX]
           when /INX/
             bytecode << lookup[:INX]
+          when /DEX/
+            bytecode << lookup[:DEX]
+          when /CPX/
+            bytecode << lookup[:CPX_I]
+            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /BNE/ #  FIXME: Complete lie
+            bytecode << lookup[:BNE]
+            bytecode << 0xf8
           when /ADC #/
             bytecode << lookup[:ADC_I]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
           when /ADC \$/
             bytecode << lookup[:ADC_Z]
             bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /BRK/
-            bytecode << lookup[:BRK]
           when /STA \$\h{4}/
             bytecode << lookup[:STA_A]
+            
+            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
+
+            bytecode << md[2].to_i(16)
+            bytecode << md[1].to_i(16)
+          when /STX \$\h{4}/
+            bytecode << lookup[:STX_A]
             
             md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
 
@@ -77,6 +95,8 @@ module Vintage
             bytecode << lookup[:STA_Z]
 
             bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /BRK/
+            bytecode << lookup[:BRK]
           else
             raise
           end

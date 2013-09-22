@@ -56,9 +56,17 @@ describe "Easy 6502" do
   end
 
   example "Branching #1" do
-    processor.run([0xa2, 0x08, 0xca, 0x8e, 0x00,
-                   0x02, 0xe0, 0x03, 0xd0, 0xf8,
-                   0x8e, 0x01, 0x02, 0x00])
+    code = assemble '
+        LDX #$08
+      decrement:
+        DEX
+        STX $0200
+        CPX #$03
+        BNE decrement
+        STX $0201
+        BRK
+      '
+    processor.run(code)
 
     processor.memory[0x200].must_equal(0x03)
     processor.memory[0x201].must_equal(0x03)
