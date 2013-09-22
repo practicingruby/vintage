@@ -45,6 +45,7 @@ module Vintage
 
     def self.load(src)
       lookup = Processor::OPCODES.invert
+      labels = {}
 
       bytecode = []
 
@@ -52,7 +53,7 @@ module Vintage
         begin
           case line
           when /\s*(.*):\s*\Z/
-            warn "label thrown out: #{$1}"
+            labels[$1] = bytecode.count
           when /LDA/
             bytecode << lookup[:LDA]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
@@ -68,9 +69,9 @@ module Vintage
           when /CPX/
             bytecode << lookup[:CPX_I]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
-          when /BNE/ #  FIXME: Complete lie
+          when /BNE (.*)\s*\Z/
             bytecode << lookup[:BNE]
-            bytecode << 0xf8
+            bytecode << $1
           when /ADC #/
             bytecode << lookup[:ADC_I]
             bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
@@ -105,7 +106,17 @@ module Vintage
         end
       end
 
-     bytecode 
+      bytecode.map.with_index do |c,i| 
+        next c unless String === c
+          
+        # FIXME: Possibly wrong, come back to it later
+        offset = labels[c] - i
+        if offset < 0
+          255 + offset
+        else
+          offset 
+        end
+      end
     end
   end
 
