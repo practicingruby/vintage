@@ -50,6 +50,8 @@ module Vintage
       bytecode = []
 
       src.each_line.with_index do |line, i|
+        line.gsub!(/;.*\Z/, '')
+
         case line
         when /\s*(.*):\s*\Z/
           labels[$1] = bytecode.count
@@ -165,7 +167,9 @@ module Vintage
                 0x99 => :STA_AY,
                 0x48 => :PHA,
                 0x68 => :PLA,
-                0x4C => :JMP }
+                0x4C => :JMP,
+                0x20 => :JSR,
+                0x60 => :RTS }
 
     STACK_OFFSET = 0x0100
 
@@ -189,7 +193,7 @@ module Vintage
 
         return unless code
         op = OPCODES[code]
-        
+
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
         when :LDA
@@ -244,6 +248,21 @@ module Vintage
           @acc = @memory[STACK_OFFSET + @sp]
         when :JMP
           @memory.program_counter = int16(@memory.shift(2))
+        when :JSR
+         low, high = [@memory.program_counter + 2].pack("v").unpack("c*")
+         @memory[STACK_OFFSET + @sp] = low
+         @sp -= 1
+         @memory[STACK_OFFSET + @sp] = high
+         @sp -= 1
+
+         @memory.program_counter = int16(@memory.shift(2))
+        when :RTS
+          @sp += 1
+          h = @memory[STACK_OFFSET + @sp]
+          @sp += 1
+          l = @memory[STACK_OFFSET + @sp]
+
+          @memory.program_counter = int16([l, h])
         when :BRK
           return
         else
