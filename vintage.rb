@@ -98,9 +98,11 @@ module Vintage
           when /JMP (.*)\s*\Z/
             bytecode << lookup[:JMP]
             bytecode << $1.strip
+            bytecode << nil # FIXME: this is a placeholder for byte counting
           when /JSR (.*)\s*\Z/
             bytecode << lookup[:JSR]
             bytecode << $1.strip
+            bytecode << nil # FIXME: this is a placeholder for byte counting
           when /RTS/
             bytecode << lookup[:RTS]
           when /ADC #/
@@ -136,7 +138,7 @@ module Vintage
         end
       end
 
-      # FIXME: Possibly wrong, come back to it later
+      # FIXME: (still) possibly wrong, come back to it later
       bytecode.flat_map.with_index do |c,i| 
         next c unless String === c
 
@@ -148,9 +150,9 @@ module Vintage
             offset 
           end
         else
-          [labels[c] + 1, 0x06]
+          [Storage::PROGRAM_OFFSET + labels[c]].pack("v").unpack("c*")
         end
-      end
+      end.compact
     end
 
     def self.int8(text, bytecode)
@@ -186,7 +188,8 @@ module Vintage
                 0xC8 => :INY,
                 0x69 => :ADC_I, 
                 0x00 => :BRK,
-                0x85 => :STA_Z, 
+                0x85 => :STA_Z,
+                0x95 => :STA_ZX,
                 0x65 => :ADC_Z, 
                 0xa2 => :LDX_I,
                 0xa6 => :LDX_Z,
@@ -219,10 +222,11 @@ module Vintage
       @sp      = 255
       @z       = 0 # FIXME: Move this all into a single byte flag array later
       @c       = 0 # ........................................................
+      @n       = 0
       @memory  = memory
     end
 
-    attr_reader :acc, :x, :y, :memory, :z, :c
+    attr_reader :acc, :x, :y, :memory, :z, :c, :n
 
     def run(bytecode)
       @memory.load(bytecode)
@@ -250,11 +254,13 @@ module Vintage
         when :STA_A
           @memory[int16(@memory.shift(2))] = @acc
         when :STA_AY
-          @memory[int16((@memory.shift(2)) + @y) % 256] = @acc 
+          @memory[int16(@memory.shift(2)) + y] = @acc  
         when :STX_A
           @memory[int16(@memory.shift(2))] = @x
         when :STA_Z
           @memory[@memory.shift] = @acc
+        when :STA_ZX
+          @memory[(@memory.shift + @x) % 256] = @acc
         when :TAX
           @x = @acc
         when :TXA
@@ -265,6 +271,8 @@ module Vintage
           @y = (@y + 1) % 256
         when :DEX
           @x = (@x - 1) % 256
+          @x == 0 ? @z = 1 : 0
+          @x[7] == 1 ? @n = 1 : @n = 0
         when :CPX_I
           @x == @memory.shift ? @z = 1 : @z = 0
         when :CPX_Z
@@ -303,6 +311,8 @@ module Vintage
           else
             @memory.shift
           end
+        when :BPL
+          branch { @n == 0 }
         when :PHA
           @memory[STACK_OFFSET + @sp] = @acc
           @sp -= 1
@@ -340,6 +350,20 @@ module Vintage
     end
 
     private
+
+    def branch
+      if yield
+        offset = @memory.shift
+
+        if offset <= 0x80
+          @memory.program_counter += offset
+        else
+          @memory.program_counter -= (0xff - offset + 1)
+        end
+      else
+        @memory.shift
+      end
+    end
 
     def int16(bytes)
       bytes.pack("c*").unpack("v").first
