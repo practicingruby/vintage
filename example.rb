@@ -5,4 +5,5 @@ memory  = Vintage::Storage.new { |k,v| ui.update(k,v) if (0x0200...0x05ff).inclu
 
 processor = Vintage::Processor.new(memory)
 
-processor.run(Vintage::Assembler.load_file("test/data/snake.asm"))
+#processor.run(Vintage::Assembler.load_file("test/data/snake.asm"))
+processor.run(File.binread("test/data/snake.dump").unpack("C*"))

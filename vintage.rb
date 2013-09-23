@@ -3,15 +3,20 @@ module Vintage
     PROGRAM_OFFSET = 0x0600
 
     def initialize(&callback)
-      @memory          = {}
+      @memory          = Hash.new(0)
       @write_callback  = callback
       @program_counter = PROGRAM_OFFSET
     end
 
     attr_accessor :program_counter
 
+    # FIXME: Unify with write_callback somehow, or have multiple callbacks.
     def [](address)
-      @memory[address]
+      if address == 0xfe
+        rand(0xff)
+      else
+        @memory[address]
+      end
     end
 
     def load(bytecode)
@@ -55,19 +60,22 @@ module Vintage
 
         next if line.strip.empty?
 
+        # FIXME: THIS CAN BE CLEANED UP MASSIVELY BY SPLITTING BETWEEN OP PART
+        # AND ARGUMENTS PART.
+
         begin
           case line
           when /\s*(.*):\s*\Z/
             labels[$1] = bytecode.count
-          when /LDA/
-            bytecode << lookup[:LDA]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+          when /LDA #/
+            bytecode << lookup[:LDA_I]
+            int8(line, bytecode)
           when /LDX/
-            bytecode << lookup[:LDX]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+            bytecode << lookup[:LDX_I]
+            int8(line, bytecode)
           when /LDY/
             bytecode << lookup[:LDY]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+            int8(line, bytecode)
           when /TAX/
             bytecode << lookup[:TAX]
           when /TXA/
@@ -80,10 +88,10 @@ module Vintage
             bytecode << lookup[:DEX]
           when /CPX/
             bytecode << lookup[:CPX_I]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+            int8(line, bytecode)
           when /CPY/
             bytecode << lookup[:CPY_I]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+            int8(line, bytecode)
           when /BNE (.*)\s*\Z/
             bytecode << lookup[:BNE]
             bytecode << $1.strip
@@ -97,39 +105,26 @@ module Vintage
             bytecode << lookup[:RTS]
           when /ADC #/
             bytecode << lookup[:ADC_I]
-            bytecode << line[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+            int8(line, bytecode)
           when /ADC \$/
             bytecode << lookup[:ADC_Z]
-            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
+            address8(line, bytecode)
           when /STA \$\h{4}\s*,\s*Y/
              bytecode << lookup[:STA_AY]
-            
-             md = line.match(/\$(\h{2})(\h{2})\s*,\s*Y\s*\Z/)
-
-             bytecode << md[2].to_i(16)
-             bytecode << md[1].to_i(16)
+             address16_y(line, bytecode)
           when /PHA/
             bytecode << lookup[:PHA]
           when /PLA/
             bytecode << lookup[:PLA]
           when /STA \$\h{4}/
             bytecode << lookup[:STA_A]
-            
-            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
-
-            bytecode << md[2].to_i(16)
-            bytecode << md[1].to_i(16)
+            address16(line, bytecode)  
           when /STX \$\h{4}/
             bytecode << lookup[:STX_A]
-            
-            md = line.match(/\$(\h{2})(\h{2})\s*\Z/)
-
-            bytecode << md[2].to_i(16)
-            bytecode << md[1].to_i(16)
+            address16(line, bytecode)
           when /STA \$\h{2}/
             bytecode << lookup[:STA_Z]
-
-            bytecode << line[/\$(\h{2})\s*\Z/, 1].to_i(16)
+            address8(line, bytecode)
           when /BRK/
             bytecode << lookup[:BRK]
           else
@@ -157,10 +152,34 @@ module Vintage
         end
       end
     end
+
+    def self.int8(text, bytecode)
+      bytecode << text[/#\$(\h{2})\s*\Z/, 1].to_i(16)
+    end
+
+    def self.address8(text, bytecode)
+      bytecode << text[/\$(\h{2})\s*\Z/, 1].to_i(16)
+    end
+
+    def self.address16(text, bytecode)
+       md = text.match(/\$(\h{2})(\h{2})\s*\Z/)
+
+       bytecode << md[2].to_i(16)
+       bytecode << md[1].to_i(16)
+    end
+
+    def self.address16_y(text, bytecode)
+       md = text.match(/\$(\h{2})(\h{2})\s*,\s*Y\s*\Z/)
+
+       bytecode << md[2].to_i(16)
+       bytecode << md[1].to_i(16)
+    end
   end
 
   class Processor
-    OPCODES = { 0xa9 => :LDA, 
+    OPCODES = { 0xA9 => :LDA_I,
+                0xA5 => :LDA_Z,
+                0xB5 => :LDA_ZX,
                 0x8D => :STA_A,
                 0xAA => :TAX, 
                 0xE8 => :INX, 
@@ -169,12 +188,15 @@ module Vintage
                 0x00 => :BRK,
                 0x85 => :STA_Z, 
                 0x65 => :ADC_Z, 
-                0xa2 => :LDX,
+                0xa2 => :LDX_I,
+                0xa6 => :LDX_Z,
                 0xCA => :DEX, 
                 0x8E => :STX_A, 
                 0xE0 => :CPX_I,
+                0xE4 => :CPX_Z,
                 0xC0 => :CPY_I,
-                0xD0 => :BNE, 
+                0xD0 => :BNE,
+                0xF0 => :BEQ,
                 0xA0 => :LDY, 
                 0x8A => :TXA,
                 0x99 => :STA_AY,
@@ -182,7 +204,11 @@ module Vintage
                 0x68 => :PLA,
                 0x4C => :JMP,
                 0x20 => :JSR,
-                0x60 => :RTS }
+                0x60 => :RTS,
+                0x29 => :AND_I,
+                0x18 => :CLC,
+                0xC9 => :CMP_I,
+                0xC5 => :CMP_Z }
 
     STACK_OFFSET = 0x0100
 
@@ -209,16 +235,22 @@ module Vintage
 
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
-        when :LDA
+        when :LDA_I
           @acc = @memory.shift
-        when :LDX
+        when :LDA_Z
+          @acc = @memory[@memory.shift]
+        when :LDA_ZX
+          @acc = @memory[(@memory.shift + @x) % 256]
+        when :LDX_I
           @x = @memory.shift
+        when :LDX_Z
+          @x = @memory[@memory.shift]
         when :LDY
           @y = @memory.shift
         when :STA_A
           @memory[int16(@memory.shift(2))] = @acc
         when :STA_AY
-          @memory[int16(@memory.shift(2)) + y] = @acc 
+          @memory[int16((@memory.shift(2)) + @y) % 256] = @acc 
         when :STX_A
           @memory[int16(@memory.shift(2))] = @x
         when :STA_Z
@@ -235,14 +267,32 @@ module Vintage
           @x = (@x - 1) % 256
         when :CPX_I
           @x == @memory.shift ? @z = 1 : @z = 0
+        when :CPX_Z
+          @x == @memory[@memory.shift] ? @z = 1 : @z = 0
         when :CPY_I
           @y == @memory.shift ? @z = 1 : @z = 0
+        when :CMP_I
+          @acc == @memory.shift ? @z = 1 : @z = 0
+        when :CMP_Z
+          @acc == @memory[@memory.shift] ? @z = 1 : @z = 0
         when :ADC_I
           @acc = (@acc + @memory.shift) % 256
         when :ADC_Z
           @acc = (@acc + @memory[@memory.shift]) % 256
         when :BNE
           if @z == 0
+            offset = @memory.shift
+
+            if offset <= 0x80
+              @memory.program_counter += offset
+            else
+              @memory.program_counter -= (0xff - offset + 1)
+            end
+          else
+            @memory.shift
+          end
+        when :BEQ
+          if @z == 1
             offset = @memory.shift
 
             if offset <= 0x80
@@ -276,10 +326,15 @@ module Vintage
           l = @memory[STACK_OFFSET + @sp]
 
           @memory.program_counter = int16([l, h])
+        when :AND_I # FIXME: May be wrong or incomplete
+          @acc = @acc & @memory.shift
+        when :CLC
+          @c = 0
         when :BRK
           return
         else
-          raise LoadError, "No operator matches code: #{'%.2x' % code.inspect}"
+          p code
+          raise LoadError, "No operator matches code: #{'%.2x' % code}"
         end
       end
     end
