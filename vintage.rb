@@ -190,6 +190,8 @@ module Vintage
                 0x00 => :BRK,
                 0x85 => :STA_Z,
                 0x95 => :STA_ZX,
+                0x91 => :STA_IY,
+                0x81 => :STA_IX,
                 0x65 => :ADC_Z, 
                 0xa2 => :LDX_I,
                 0xa6 => :LDX_Z,
@@ -211,7 +213,14 @@ module Vintage
                 0x29 => :AND_I,
                 0x18 => :CLC,
                 0xC9 => :CMP_I,
-                0xC5 => :CMP_Z }
+                0xC5 => :CMP_Z,
+                0x10 => :BPL,
+                0x4A => :LSR,
+                0xB0 => :BCS,
+                0x90 => :BCC,
+                0x38 => :SEC,
+                0xE9 => :SBC_I,
+                0xEA => :NOP }
 
     STACK_OFFSET = 0x0100
 
@@ -228,6 +237,28 @@ module Vintage
 
     attr_reader :acc, :x, :y, :memory, :z, :c, :n
 
+    def x=(new_x)
+      @x = normalize(new_x)
+    end
+
+    def y=(new_y)
+      @y = normalize(new_y)
+    end
+
+    def acc=(new_acc)
+      @acc = normalize(new_acc) 
+    end
+
+    def normalize(number)
+      number %= 256
+      number.zero?   ? @z = 1 : @z = 0
+      number[7] == 1 ? @n = 1 : @n = 0
+
+      number
+    end
+
+
+
     def run(bytecode)
       @memory.load(bytecode)
 
@@ -240,79 +271,73 @@ module Vintage
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
         when :LDA_I
-          @acc = @memory.shift
+          self.acc = @memory.shift
         when :LDA_Z
-          @acc = @memory[@memory.shift]
+          self.acc = @memory[@memory.shift]
         when :LDA_ZX
-          @acc = @memory[(@memory.shift + @x) % 256]
+          self.acc = @memory[(@memory.shift + x) % 256]
         when :LDX_I
-          @x = @memory.shift
+          self.x = @memory.shift
         when :LDX_Z
-          @x = @memory[@memory.shift]
+          self.x = @memory[@memory.shift]
         when :LDY
-          @y = @memory.shift
+          self.y = @memory.shift
         when :STA_A
-          @memory[int16(@memory.shift(2))] = @acc
+          @memory[int16(@memory.shift(2))] = acc
         when :STA_AY
-          @memory[int16(@memory.shift(2)) + y] = @acc  
+          @memory[int16(@memory.shift(2)) + y] = acc  
+        when :STA_IX
+          #zero confidence in correctness here
+          
+          address = @memory.shift
+          l = @memory[address + x]
+          h = @memory[address + x + 1]
+
+          @memory[int16([l, h])] = acc
+        when :STA_IY
+          @memory[@memory[@memory.shift] + y] = acc
         when :STX_A
-          @memory[int16(@memory.shift(2))] = @x
+          @memory[int16(@memory.shift(2))] = x
         when :STA_Z
-          @memory[@memory.shift] = @acc
+          @memory[@memory.shift] = acc
         when :STA_ZX
-          @memory[(@memory.shift + @x) % 256] = @acc
+          @memory[(@memory.shift + x) % 256] = acc
         when :TAX
-          @x = @acc
+          self.x = acc
         when :TXA
-          @acc = @x
+          self.acc = x
         when :INX
-          @x = (@x + 1) % 256
+          self.x += 1 
         when :INY
-          @y = (@y + 1) % 256
+          self.y += 1
         when :DEX
-          @x = (@x - 1) % 256
-          @x == 0 ? @z = 1 : 0
-          @x[7] == 1 ? @n = 1 : @n = 0
+          self.x -= 1
         when :CPX_I
-          @x == @memory.shift ? @z = 1 : @z = 0
+          x == @memory.shift ? @z = 1 : @z = 0
         when :CPX_Z
-          @x == @memory[@memory.shift] ? @z = 1 : @z = 0
+          x == @memory[@memory.shift] ? @z = 1 : @z = 0
         when :CPY_I
-          @y == @memory.shift ? @z = 1 : @z = 0
+          y == @memory.shift ? @z = 1 : @z = 0
         when :CMP_I
-          @acc == @memory.shift ? @z = 1 : @z = 0
+          acc == @memory.shift ? @z = 1 : @z = 0
         when :CMP_Z
-          @acc == @memory[@memory.shift] ? @z = 1 : @z = 0
+          acc == @memory[@memory.shift] ? @z = 1 : @z = 0
         when :ADC_I
-          @acc = (@acc + @memory.shift) % 256
+          self.acc += @memory.shift
+        when :SBC_I
+          self.acc -= @memory.shift
         when :ADC_Z
-          @acc = (@acc + @memory[@memory.shift]) % 256
+          self.acc = (acc + @memory[@memory.shift]) % 256
         when :BNE
-          if @z == 0
-            offset = @memory.shift
-
-            if offset <= 0x80
-              @memory.program_counter += offset
-            else
-              @memory.program_counter -= (0xff - offset + 1)
-            end
-          else
-            @memory.shift
-          end
+          branch { @z == 0 }
         when :BEQ
-          if @z == 1
-            offset = @memory.shift
-
-            if offset <= 0x80
-              @memory.program_counter += offset
-            else
-              @memory.program_counter -= (0xff - offset + 1)
-            end
-          else
-            @memory.shift
-          end
+          branch { @z == 1 }
         when :BPL
           branch { @n == 0 }
+        when :BCS
+          branch { @c == 1 }
+        when :BCC
+          branch { @c == 0 }
         when :PHA
           @memory[STACK_OFFSET + @sp] = @acc
           @sp -= 1
@@ -338,8 +363,16 @@ module Vintage
           @memory.program_counter = int16([l, h])
         when :AND_I # FIXME: May be wrong or incomplete
           @acc = @acc & @memory.shift
+        when :SEC
+          @c = 1
         when :CLC
           @c = 0
+        when :LSR
+          @c = acc[7]
+          self.acc >>= 1
+        when :NOP
+          sleep 0.001
+          # do nothing
         when :BRK
           return
         else
