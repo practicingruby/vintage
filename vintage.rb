@@ -226,7 +226,8 @@ module Vintage
                 0x38 => :SEC,
                 0xE9 => :SBC_I,
                 0xEA => :NOP,
-                0x24 => :BIT }
+                0x24 => :BIT,
+                0xC6 => :DEC }
 
     STACK_OFFSET = 0x0100
 
@@ -257,8 +258,8 @@ module Vintage
 
     def normalize(number)
       number %= 256
-      number.zero?   ? @z = 1 : @z = 0
-      number[7] == 1 ? @n = 1 : @n = 0
+      number == 0 ? @z = 1 : @z = 0
+      @n = number[7]
 
       number
     end
@@ -301,7 +302,11 @@ module Vintage
 
           @memory[int16([l, h])] = acc
         when :STA_IY
-          @memory[@memory[@memory.shift] + y] = acc
+          address = @memory.shift
+          l = @memory[address]
+          h = @memory[address + 1]
+
+          @memory[int16([l,h]) + y] = acc
         when :STX_A
           @memory[int16(@memory.shift(2))] = x
         when :STA_Z
@@ -318,6 +323,14 @@ module Vintage
           self.y += 1
         when :DEX
           self.x -= 1
+        when :DEC
+         address = @memory.shift
+         t = (@memory[address] - 1) % 256
+
+         @n = t[7]
+         @z = (t == 0 ? 1 : 0)
+
+         @memory[address] = t
         when :CPX_I
           x == @memory.shift ? @z = 1 : @z = 0
         when :CPX_Z
@@ -329,9 +342,19 @@ module Vintage
         when :CMP_Z
           acc == @memory[@memory.shift] ? @z = 1 : @z = 0
         when :ADC_I
-          self.acc += @memory.shift
+          t = acc + @memory.shift + @c
+          @n   = acc[7]
+          @z   = (t == 0 ? 1 : 0)
+
+          @c   = t > 255 ? 1 : 0
+          @acc = t % 256
         when :SBC_I
-          self.acc -= @memory.shift
+          t  = acc - @memory.shift - (@c == 0 ? 1 : 0)
+          @c = (t >= 0 ? 1 : 0)
+          @n = t[7]
+          @z = (t == 0 ? 1 : 0)
+
+          @acc = t % 256
         when :ADC_Z
           self.acc = (acc + @memory[@memory.shift]) % 256
         when :BNE
@@ -368,7 +391,7 @@ module Vintage
 
           @memory.program_counter = int16([l, h])
         when :AND_I # FIXME: May be wrong or incomplete
-          @acc = @acc & @memory.shift
+          self.acc = @acc & @memory.shift
         when :SEC
           @c = 1
         when :CLC
@@ -382,8 +405,6 @@ module Vintage
           bits.zero? ? @z = 1 : @z = 0
           @n = bits[7]
         when :NOP
-          sleep 0.001
-          # do nothing
         when :BRK
           return
         else
@@ -486,7 +507,9 @@ module Vintage
     end
 
     def update(key, value)
-      @pixels.push(Pixel.new(key % 32, (key - 0x200) / 32, Colors[value]))
+      sleep 0.03
+
+      @pixels.push(Pixel.new(key % 32, (key - 0x200) / 32, Colors[value % 16]))
       @panel.repaint
     end
 
