@@ -1,5 +1,7 @@
 Possibly a 6502 emulator
 
+![](http://i.imgur.com/0DsKeoy.gif)
+
 ## Resources
 
 * [Instructions](http://www.6502.org/tutorials/6502opcodes.html)

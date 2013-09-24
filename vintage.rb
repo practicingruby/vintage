@@ -227,7 +227,8 @@ module Vintage
                 0xE9 => :SBC_I,
                 0xEA => :NOP,
                 0x24 => :BIT,
-                0xC6 => :DEC }
+                0xC6 => :DEC,
+                0xE6 => :INC }
 
     STACK_OFFSET = 0x0100
 
@@ -324,25 +325,64 @@ module Vintage
         when :DEX
           self.x -= 1
         when :DEC
-         address = @memory.shift
-         t = (@memory[address] - 1) % 256
+          address = @memory.shift
+         
+          t = normalize(@memory[address] - 1)
 
-         @n = t[7]
-         @z = (t == 0 ? 1 : 0)
+          @memory[address] = t
+        when :INC
+          address = @memory.shift
+         
+          t = normalize(@memory[address] + 1)
 
-         @memory[address] = t
+          @memory[address] = t
         when :CPX_I
-          x == @memory.shift ? @z = 1 : @z = 0
+          m = @memory.shift
+          
+          t  = x - m
+          @n = t[7]
+          @c = x >= m ? 1 : 0
+          @z = (t == 0 ? 1 : 0 )
         when :CPX_Z
-          x == @memory[@memory.shift] ? @z = 1 : @z = 0
+          m = @memory[@memory.shift]
+
+          t  = x - m
+          @n = t[7]
+          @c = x >= m ? 1 : 0
+          @z = (t == 0 ? 1 : 0 )
         when :CPY_I
-          y == @memory.shift ? @z = 1 : @z = 0
+          m = @memory.shift
+
+          t = y - m
+          @n = t[7]
+          @c = y >= m ? 1 : 0
+          @z = (t == 0 ? 1 : 0 )
         when :CMP_I
-          acc == @memory.shift ? @z = 1 : @z = 0
+          m = @memory.shift
+
+          t = acc - m
+
+          @n = t[7]
+          @c = y >= acc ? 1 : 0
+          @z = (t == 0 ? 1 : 0 )
         when :CMP_Z
-          acc == @memory[@memory.shift] ? @z = 1 : @z = 0
+          m = @memory[@memory.shift]
+
+          t = acc - m
+
+          @n = t[7]
+          @c = y >= acc ? 1 : 0
+          @z = (t == 0 ? 1 : 0 )
         when :ADC_I
           t = acc + @memory.shift + @c
+          @n   = acc[7]
+          @z   = (t == 0 ? 1 : 0)
+
+          @c   = t > 255 ? 1 : 0
+          @acc = t % 256
+        when :ADC_Z
+          t = acc + @memory[@memory.shift] + @c
+
           @n   = acc[7]
           @z   = (t == 0 ? 1 : 0)
 
@@ -355,8 +395,6 @@ module Vintage
           @z = (t == 0 ? 1 : 0)
 
           @acc = t % 256
-        when :ADC_Z
-          self.acc = (acc + @memory[@memory.shift]) % 256
         when :BNE
           branch { @z == 0 }
         when :BEQ
@@ -372,7 +410,7 @@ module Vintage
           @sp -= 1
         when :PLA
           @sp += 1
-          @acc = @memory[STACK_OFFSET + @sp]
+          self.acc = @memory[STACK_OFFSET + @sp]
         when :JMP
           @memory.program_counter = int16(@memory.shift(2))
         when :JSR
@@ -390,17 +428,19 @@ module Vintage
           l = @memory[STACK_OFFSET + @sp]
 
           @memory.program_counter = int16([l, h])
-        when :AND_I # FIXME: May be wrong or incomplete
+        when :AND_I 
           self.acc = @acc & @memory.shift
         when :SEC
           @c = 1
         when :CLC
           @c = 0
         when :LSR
-          @c = acc[7]
-          self.acc >>= 1
+          @n   = 0
+          @c   = acc[0]
+          @acc = (acc >> 1) % 127
+          @z   = (@acc == 0 ? 1 : 0)
         when :BIT
-          bits = (acc & @memory.shift)
+          bits = (acc & @memory[@memory.shift])
           
           bits.zero? ? @z = 1 : @z = 0
           @n = bits[7]
