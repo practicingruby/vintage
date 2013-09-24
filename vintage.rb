@@ -4,8 +4,12 @@ module Vintage
 
     def initialize(&callback)
       @memory          = Hash.new(0)
-      @write_callback  = callback
       @program_counter = PROGRAM_OFFSET
+      @write_callbacks = []
+    end
+
+    def watch(&block)
+      @write_callbacks << block
     end
 
     attr_accessor :program_counter
@@ -14,6 +18,7 @@ module Vintage
     def [](address)
       if address == 0xfe
         rand(0xff)
+
       else
         @memory[address]
       end
@@ -39,7 +44,7 @@ module Vintage
     def []=(address, value)
       @memory[address] = value
 
-      @write_callback.call(address, value) if @write_callback
+      @write_callbacks.each { |c| c.call(address, value) }
     end
   end
 
@@ -220,7 +225,8 @@ module Vintage
                 0x90 => :BCC,
                 0x38 => :SEC,
                 0xE9 => :SBC_I,
-                0xEA => :NOP }
+                0xEA => :NOP,
+                0x24 => :BIT }
 
     STACK_OFFSET = 0x0100
 
@@ -370,6 +376,11 @@ module Vintage
         when :LSR
           @c = acc[7]
           self.acc >>= 1
+        when :BIT
+          bits = (acc & @memory.shift)
+          
+          bits.zero? ? @z = 1 : @z = 0
+          @n = bits[7]
         when :NOP
           sleep 0.001
           # do nothing
@@ -444,12 +455,14 @@ module Vintage
     end
 
     class KeyCapture < KeyAdapter
+      attr_accessor :memory
+
       def keyPressed(e)
-        p e.getKeyCode
+        memory[0xff] = e.getKeyChar
       end
     end
 
-    def initialize
+    def initialize(memory)
       @panel = Panel.new
       @panel.interface = self
       @new   = true
@@ -459,7 +472,12 @@ module Vintage
                                            SCALE * DIMENSIONS))
 
       @panel.setFocusable(true)
-      @panel.addKeyListener(KeyCapture.new)
+      
+      key_capture = KeyCapture.new
+      key_capture.memory = memory
+      @panel.addKeyListener(key_capture)
+
+      memory.watch { |k,v| update(k,v) if (0x0200...0x05ff).include?(k) }
 
       frame = JFrame.new
       frame.add(@panel)

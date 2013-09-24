@@ -1,7 +1,7 @@
 require_relative "vintage"
 
-ui      = Vintage::Visualization.new
-memory  = Vintage::Storage.new { |k,v| ui.update(k,v) if (0x0200...0x05ff).include?(k) }
+memory  = Vintage::Storage.new
+ui      = Vintage::Visualization.new(memory)
 
 processor = Vintage::Processor.new(memory)
 
