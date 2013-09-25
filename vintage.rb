@@ -448,7 +448,6 @@ module Vintage
         when :BRK
           return
         else
-          p code
           raise LoadError, "No operator matches code: #{'%.2x' % code}"
         end
       end

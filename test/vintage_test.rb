@@ -1,6 +1,6 @@
 require "minitest/autorun"
 
-require_relative "vintage"
+require_relative "../lib/vintage"
 
 # Test cases below come from the examples in:
 # http://skilldrick.github.io/easy6502/#first-program

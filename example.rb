@@ -1,4 +1,5 @@
-require_relative "vintage"
+require_relative "lib/vintage"
+require_relative "lib/vintage/visualization"
 
 memory  = Vintage::Storage.new
 ui      = Vintage::Visualization.new(memory)
