@@ -93,7 +93,6 @@ module Vintage
         return unless code
         op = self.class.opcodes[code]
 
-        # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op.first
         when "LDA"
           self.acc = read(op.last)
@@ -136,27 +135,11 @@ module Vintage
 
           @memory[address] = t
         when "CPX"
-          m = read(op.last)
-          
-          t  = x - m
-          @n = t[7]
-          @c = x >= m ? 1 : 0
-          @z = (t == 0 ? 1 : 0)
+          compare(x, read(op.last))
         when "CPY"
-          m = read(op.last)
-
-          t = y - m
-          @n = t[7]
-          @c = y >= m ? 1 : 0
-          @z = (t == 0 ? 1 : 0 )
+          compare(y, read(op.last))
         when "CMP"
-          m = read(op.last)
-
-          t = acc - m
-
-          @n = t[7]
-          @c = y >= acc ? 1 : 0
-          @z = (t == 0 ? 1 : 0 )
+          compare(acc, read(op.last))
         when "ADC"
           t = acc + read(op.last) + @c
           @n   = acc[7]
@@ -190,7 +173,7 @@ module Vintage
         when "JMP"
           @memory.program_counter = int16(@memory.shift(2))
         when "JSR"
-         low, high = [@memory.program_counter + 2].pack("v").unpack("c*")
+         low, high = bytes(@memory.program_counter + 2)
          @memory[STACK_OFFSET + @sp] = low
          @sp -= 1
          @memory[STACK_OFFSET + @sp] = high
@@ -235,6 +218,14 @@ module Vintage
 
     private
 
+    def compare(a,b)
+      t  = a - b
+
+      @n = t[7]
+      @c = a >= b ? 1 : 0
+      @z = (t == 0 ? 1 : 0)
+    end
+
     def branch
       if yield
         offset = @memory.shift
@@ -251,6 +242,10 @@ module Vintage
 
     def int16(bytes)
       bytes.pack("c*").unpack("v").first
+    end
+
+    def bytes(num)
+      [num].pack("v").unpack("c*")
     end
   end
 end
