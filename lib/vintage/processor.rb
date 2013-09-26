@@ -46,6 +46,44 @@ module Vintage
       number
     end
 
+    def read(mode)
+      case mode
+      when "IM"
+        @memory.shift
+      when "ZP"
+        @memory[@memory.shift]
+      when "ZX"
+        @memory[(@memory.shift + x) % 256]
+      end
+    end
+
+    def write(value, mode)
+      case mode
+      when "AB"
+        @memory[int16(@memory.shift(2))] = value
+      when "AY"
+        @memory[int16(@memory.shift(2)) + y] = value
+      when "ZP"
+        @memory[@memory.shift] = value
+      when "ZX"
+        @memory[(@memory.shift + x) % 256] = value
+      when "IX"
+        #zero confidence in correctness here
+          
+        address = @memory.shift
+        l = @memory[address + x]
+        h = @memory[address + x + 1]
+
+        @memory[int16([l, h])] = value
+      when "IY"
+        address = @memory.shift
+        l = @memory[address]
+        h = @memory[address + 1]
+
+        @memory[int16([l,h]) + y] = value
+      end
+    end
+
     def run(bytecode)
       @memory.load(bytecode)
 
@@ -58,41 +96,31 @@ module Vintage
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
         case op
         when ["LDA", "IM"]
-          self.acc = @memory.shift
+          self.acc = read(op.last)
         when ["LDA", "ZP"]
-          self.acc = @memory[@memory.shift]
+          self.acc = read(op.last)
         when ["LDA", "ZX"]
-          self.acc = @memory[(@memory.shift + x) % 256]
+          self.acc = read(op.last)
         when ["LDX", "IM"]
-          self.x = @memory.shift
+          self.x = read(op.last)
         when ["LDX", "ZP"]
-          self.x = @memory[@memory.shift]
+          self.x = read(op.last)
         when ["LDY", "IM"]
-          self.y = @memory.shift
+          self.y = read(op.last)
         when ["STA", "AB"]
-          @memory[int16(@memory.shift(2))] = acc
+          write(acc, op.last)
         when ["STA", "AY"]
-          @memory[int16(@memory.shift(2)) + y] = acc  
+          write(acc, op.last)
         when ["STA", "IX"]
-          #zero confidence in correctness here
-          
-          address = @memory.shift
-          l = @memory[address + x]
-          h = @memory[address + x + 1]
-
-          @memory[int16([l, h])] = acc
+          write(acc, op.last) 
         when ["STA", "IY"]
-          address = @memory.shift
-          l = @memory[address]
-          h = @memory[address + 1]
-
-          @memory[int16([l,h]) + y] = acc
+          write(acc, op.last)
         when ["STX", "AB"]
-          @memory[int16(@memory.shift(2))] = x
+          write(x, op.last)
         when ["STA", "ZP"]
-          @memory[@memory.shift] = acc
+          write(acc, op.last)
         when ["STA", "ZX"]
-          @memory[(@memory.shift + x) % 256] = acc
+          write(acc, op.last)
         when ["TAX", "#"]
           self.x = acc
         when ["TXA", "#"]
@@ -104,40 +132,44 @@ module Vintage
         when ["DEX", "#"]
           self.x -= 1
         when ["DEC", "ZP"]
+          # TODO: Need a non-destructive read
+
           address = @memory.shift
          
           t = normalize(@memory[address] - 1)
 
           @memory[address] = t
         when ["INC", "ZP"]
+          # TODO: Need a non-destructive read
+          
           address = @memory.shift
          
           t = normalize(@memory[address] + 1)
 
           @memory[address] = t
         when ["CPX", "IM"]
-          m = @memory.shift
+          m = read(op.last)
           
           t  = x - m
           @n = t[7]
           @c = x >= m ? 1 : 0
           @z = (t == 0 ? 1 : 0)
         when ["CPX", "ZP"]
-          m = @memory[@memory.shift]
+          m = read(op.last)
 
           t  = x - m
           @n = t[7]
           @c = x >= m ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
         when ["CPY", "IM"]
-          m = @memory.shift
+          m = read(op.last)
 
           t = y - m
           @n = t[7]
           @c = y >= m ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
         when ["CMP", "IM"]
-          m = @memory.shift
+          m = read(op.last)
 
           t = acc - m
 
@@ -145,7 +177,7 @@ module Vintage
           @c = y >= acc ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
         when ["CMP", "ZP"]
-          m = @memory[@memory.shift]
+          m = read(op.last)
 
           t = acc - m
 
@@ -153,14 +185,14 @@ module Vintage
           @c = y >= acc ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
         when ["ADC", "IM"]
-          t = acc + @memory.shift + @c
+          t = acc + read(op.last) + @c
           @n   = acc[7]
           @z   = (t == 0 ? 1 : 0)
 
           @c   = t > 255 ? 1 : 0
           @acc = t % 256
         when ["ADC", "ZP"]
-          t = acc + @memory[@memory.shift] + @c
+          t = acc + read(op.last) + @c
 
           @n   = acc[7]
           @z   = (t == 0 ? 1 : 0)
@@ -168,7 +200,7 @@ module Vintage
           @c   = t > 255 ? 1 : 0
           @acc = t % 256
         when ["SBC", "IM"]
-          t  = acc - @memory.shift - (@c == 0 ? 1 : 0)
+          t  = acc - read(op.last) - (@c == 0 ? 1 : 0)
           @c = (t >= 0 ? 1 : 0)
           @n = t[7]
           @z = (t == 0 ? 1 : 0)
@@ -208,7 +240,7 @@ module Vintage
 
           @memory.program_counter = int16([l, h])
         when ["AND", "IM"]
-          self.acc = @acc & @memory.shift
+          self.acc = @acc & read(op.last)
         when ["SEC", "#"]
           @c = 1
         when ["CLC", "#"]
@@ -219,7 +251,7 @@ module Vintage
           @acc = (acc >> 1) % 127
           @z   = (@acc == 0 ? 1 : 0)
         when ["BIT", "ZP"]
-          bits = (acc & @memory[@memory.shift])
+          bits = (acc & read(op.last))
           
           bits.zero? ? @z = 1 : @z = 0
           @n = bits[7]
