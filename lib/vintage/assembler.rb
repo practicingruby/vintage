@@ -5,7 +5,7 @@ module Vintage
     end
 
     def self.load(src)
-      lookup = Processor::OPCODES.invert
+      lookup = Inspector.new(Processor.opcodes.invert)
       labels = {}
 
       bytecode = []
@@ -24,67 +24,67 @@ module Vintage
           when /\s*(.*):\s*\Z/
             labels[$1] = bytecode.count
           when /LDA #/
-            bytecode << lookup[:LDA_I]
+            bytecode << lookup[["LDA", "IM"]]
             int8(line, bytecode)
           when /LDX/
-            bytecode << lookup[:LDX_I]
+            bytecode << lookup[["LDX", "IM"]]
             int8(line, bytecode)
           when /LDY/
-            bytecode << lookup[:LDY]
+            bytecode << lookup[["LDY", "IM"]]
             int8(line, bytecode)
           when /TAX/
-            bytecode << lookup[:TAX]
+            bytecode << lookup[["TAX", "#"]]
           when /TXA/
-            bytecode << lookup[:TXA]
+            bytecode << lookup[["TXA", "#"]]
           when /INX/
-            bytecode << lookup[:INX]
+            bytecode << lookup[["INX", "#"]]
           when /INY/
-            bytecode << lookup[:INY]
+            bytecode << lookup[["INY", "#"]]
           when /DEX/
-            bytecode << lookup[:DEX]
+            bytecode << lookup[["DEX", "#"]]
           when /CPX/
-            bytecode << lookup[:CPX_I]
+            bytecode << lookup[["CPX", "IM"]]
             int8(line, bytecode)
           when /CPY/
-            bytecode << lookup[:CPY_I]
+            bytecode << lookup[["CPY", "IM"]]
             int8(line, bytecode)
           when /BNE (.*)\s*\Z/
-            bytecode << lookup[:BNE]
+            bytecode << lookup[["BNE", "@"]]
             bytecode << $1.strip
           when /JMP (.*)\s*\Z/
-            bytecode << lookup[:JMP]
+            bytecode << lookup[["JMP", "AB"]]
             bytecode << $1.strip
             bytecode << nil # FIXME: this is a placeholder for byte counting
           when /JSR (.*)\s*\Z/
-            bytecode << lookup[:JSR]
+            bytecode << lookup[["JSR", "AB"]]
             bytecode << $1.strip
             bytecode << nil # FIXME: this is a placeholder for byte counting
           when /RTS/
-            bytecode << lookup[:RTS]
+            bytecode << lookup[["RTS", "#"]]
           when /ADC #/
-            bytecode << lookup[:ADC_I]
+            bytecode << lookup[["ADC", "IM"]]
             int8(line, bytecode)
           when /ADC \$/
-            bytecode << lookup[:ADC_Z]
+            bytecode << lookup[["ADC", "ZP"]]
             address8(line, bytecode)
           when /STA \$\h{4}\s*,\s*Y/
-             bytecode << lookup[:STA_AY]
+             bytecode << lookup[["STA", "AY"]]
              address16_y(line, bytecode)
           when /PHA/
-            bytecode << lookup[:PHA]
+            bytecode << lookup[["PHA", "#"]]
           when /PLA/
-            bytecode << lookup[:PLA]
+            bytecode << lookup[["PLA", "#"]]
           when /STA \$\h{4}/
-            bytecode << lookup[:STA_A]
+            bytecode << lookup[["STA", "AB"]]
             address16(line, bytecode)  
           when /STX \$\h{4}/
-            bytecode << lookup[:STX_A]
+            bytecode << lookup[["STX", "AB"]]
             address16(line, bytecode)
           when /STA \$\h{2}/
-            bytecode << lookup[:STA_Z]
+            bytecode << lookup[["STA", "ZP"]]
             address8(line, bytecode)
           when /BRK/
-            bytecode << lookup[:BRK]
+            bytecode << lookup[["BRK", "#"]]
           else
             raise "Syntax Error on line #{i + 1}:\n  #{line}"
           end
@@ -98,7 +98,7 @@ module Vintage
       bytecode.flat_map.with_index do |c,i| 
         next c unless String === c
 
-        if bytecode[i - 1] == lookup[:BNE]
+        if bytecode[i - 1] == lookup[["BNE", "@"]]
           offset = labels[c] - i
           if offset < 0
             255 + offset
