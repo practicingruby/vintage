@@ -5,7 +5,7 @@ module Vintage
     end
 
     def self.load(src)
-      lookup = Inspector.new(Processor.opcodes.invert)
+      lookup = Processor.opcodes.invert
       labels = {}
 
       bytecode = []
