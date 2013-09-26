@@ -94,44 +94,30 @@ module Vintage
         op = self.class.opcodes[code]
 
         # FIXME: OPERATIONS NEED TO TAKE FLAGS INTO ACCOUNT
-        case op
-        when ["LDA", "IM"]
+        case op.first
+        when "LDA"
           self.acc = read(op.last)
-        when ["LDA", "ZP"]
-          self.acc = read(op.last)
-        when ["LDA", "ZX"]
-          self.acc = read(op.last)
-        when ["LDX", "IM"]
+        when "LDX"
           self.x = read(op.last)
-        when ["LDX", "ZP"]
-          self.x = read(op.last)
-        when ["LDY", "IM"]
+        when "LDY"
           self.y = read(op.last)
-        when ["STA", "AB"]
+        when "STA"
           write(acc, op.last)
-        when ["STA", "AY"]
-          write(acc, op.last)
-        when ["STA", "IX"]
-          write(acc, op.last) 
-        when ["STA", "IY"]
-          write(acc, op.last)
-        when ["STX", "AB"]
+        when "STX"
           write(x, op.last)
-        when ["STA", "ZP"]
-          write(acc, op.last)
-        when ["STA", "ZX"]
-          write(acc, op.last)
-        when ["TAX", "#"]
+        when "TAX"
           self.x = acc
-        when ["TXA", "#"]
+        when "TXA"
           self.acc = x
-        when ["INX", "#"]
+        when "INX"
           self.x += 1 
-        when ["INY", "#"]
+        when "INY"
           self.y += 1
-        when ["DEX", "#"]
+        when "DEX"
           self.x -= 1
-        when ["DEC", "ZP"]
+        when "DEC"
+          raise NotImplementedError unless op.last == "ZP" # FIXME
+
           # TODO: Need a non-destructive read
 
           address = @memory.shift
@@ -139,7 +125,9 @@ module Vintage
           t = normalize(@memory[address] - 1)
 
           @memory[address] = t
-        when ["INC", "ZP"]
+        when "INC" 
+          raise NotImplementedError unless op.last == "ZP" # FIXME
+
           # TODO: Need a non-destructive read
           
           address = @memory.shift
@@ -147,28 +135,21 @@ module Vintage
           t = normalize(@memory[address] + 1)
 
           @memory[address] = t
-        when ["CPX", "IM"]
+        when "CPX"
           m = read(op.last)
           
           t  = x - m
           @n = t[7]
           @c = x >= m ? 1 : 0
           @z = (t == 0 ? 1 : 0)
-        when ["CPX", "ZP"]
-          m = read(op.last)
-
-          t  = x - m
-          @n = t[7]
-          @c = x >= m ? 1 : 0
-          @z = (t == 0 ? 1 : 0 )
-        when ["CPY", "IM"]
+        when "CPY"
           m = read(op.last)
 
           t = y - m
           @n = t[7]
           @c = y >= m ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
-        when ["CMP", "IM"]
+        when "CMP"
           m = read(op.last)
 
           t = acc - m
@@ -176,55 +157,39 @@ module Vintage
           @n = t[7]
           @c = y >= acc ? 1 : 0
           @z = (t == 0 ? 1 : 0 )
-        when ["CMP", "ZP"]
-          m = read(op.last)
-
-          t = acc - m
-
-          @n = t[7]
-          @c = y >= acc ? 1 : 0
-          @z = (t == 0 ? 1 : 0 )
-        when ["ADC", "IM"]
+        when "ADC"
           t = acc + read(op.last) + @c
           @n   = acc[7]
           @z   = (t == 0 ? 1 : 0)
 
           @c   = t > 255 ? 1 : 0
           @acc = t % 256
-        when ["ADC", "ZP"]
-          t = acc + read(op.last) + @c
-
-          @n   = acc[7]
-          @z   = (t == 0 ? 1 : 0)
-
-          @c   = t > 255 ? 1 : 0
-          @acc = t % 256
-        when ["SBC", "IM"]
+        when "SBC"
           t  = acc - read(op.last) - (@c == 0 ? 1 : 0)
           @c = (t >= 0 ? 1 : 0)
           @n = t[7]
           @z = (t == 0 ? 1 : 0)
 
           @acc = t % 256
-        when ["BNE", "@"]
+        when "BNE"
           branch { @z == 0 }
-        when ["BEQ", "@"]
+        when "BEQ"
           branch { @z == 1 }
-        when ["BPL", "@"]
+        when "BPL"
           branch { @n == 0 }
-        when ["BCS", "@"]
+        when "BCS"
           branch { @c == 1 }
-        when ["BCC", "@"]
+        when "BCC"
           branch { @c == 0 }
-        when ["PHA", "#"]
+        when "PHA"
           @memory[STACK_OFFSET + @sp] = @acc
           @sp -= 1
-        when ["PLA", "#"]
+        when "PLA"
           @sp += 1
           self.acc = @memory[STACK_OFFSET + @sp]
-        when ["JMP", "AB"]
+        when "JMP"
           @memory.program_counter = int16(@memory.shift(2))
-        when ["JSR", "AB"]
+        when "JSR"
          low, high = [@memory.program_counter + 2].pack("v").unpack("c*")
          @memory[STACK_OFFSET + @sp] = low
          @sp -= 1
@@ -232,31 +197,31 @@ module Vintage
          @sp -= 1
 
          @memory.program_counter = int16(@memory.shift(2))
-        when ["RTS", "#"]
+        when "RTS"
           @sp += 1
           h = @memory[STACK_OFFSET + @sp]
           @sp += 1
           l = @memory[STACK_OFFSET + @sp]
 
           @memory.program_counter = int16([l, h])
-        when ["AND", "IM"]
+        when "AND"
           self.acc = @acc & read(op.last)
-        when ["SEC", "#"]
+        when "SEC"
           @c = 1
-        when ["CLC", "#"]
+        when "CLC"
           @c = 0
-        when ["LSR", "#"]
+        when "LSR"
           @n   = 0
           @c   = acc[0]
           @acc = (acc >> 1) % 127
           @z   = (@acc == 0 ? 1 : 0)
-        when ["BIT", "ZP"]
+        when "BIT"
           bits = (acc & read(op.last))
           
           bits.zero? ? @z = 1 : @z = 0
           @n = bits[7]
-        when ["NOP", "#"]
-        when ["BRK", "#"]
+        when "NOP"
+        when "BRK"
           return
         else
           if op
