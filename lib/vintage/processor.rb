@@ -90,7 +90,8 @@ module Vintage
     def operations
       return @ops if @ops
 
-      # FIXME: replace with m.read, m.write(value) or similar
+      # FIXME: replace with m.read, m.write(value) or similar (m.value,
+      # m.value=)
 
       @ops = {
         LDA: -> { reg.a = read(mode) },
@@ -144,6 +145,7 @@ module Vintage
         BRK: -> { raise StopIteration }
       }
     end
+
 
     attr_accessor :mode # FIXME: Ugly hack, roll into m.read / m.write(value) fix
 
