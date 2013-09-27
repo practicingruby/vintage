@@ -68,8 +68,6 @@ module Vintage
       when "ZX"
         @memory[(@memory.shift + x) % 256] = value
       when "IX"
-        #zero confidence in correctness here
-          
         address = @memory.shift
         l = @memory[address + x]
         h = @memory[address + x + 1]
@@ -115,25 +113,9 @@ module Vintage
         when "DEX"
           self.x -= 1
         when "DEC"
-          raise NotImplementedError unless op.last == "ZP" # FIXME
-
-          # TODO: Need a non-destructive read
-
-          address = @memory.shift
-         
-          t = normalize(@memory[address] - 1)
-
-          @memory[address] = t
+          zp_update { |e| normalize(@memory[e] - 1) }
         when "INC" 
-          raise NotImplementedError unless op.last == "ZP" # FIXME
-
-          # TODO: Need a non-destructive read
-          
-          address = @memory.shift
-         
-          t = normalize(@memory[address] + 1)
-
-          @memory[address] = t
+          zp_update { |e| normalize(@memory[e] + 1) }
         when "CPX"
           compare(x, read(op.last))
         when "CPY"
@@ -142,6 +124,7 @@ module Vintage
           compare(acc, read(op.last))
         when "ADC"
           t = acc + read(op.last) + @c
+
           @n   = acc[7]
           @z   = (t == 0 ? 1 : 0)
 
@@ -149,10 +132,11 @@ module Vintage
           @acc = t % 256
         when "SBC"
           t  = acc - read(op.last) - (@c == 0 ? 1 : 0)
-          @c = (t >= 0 ? 1 : 0)
+
           @n = t[7]
           @z = (t == 0 ? 1 : 0)
 
+          @c = (t >= 0 ? 1 : 0)
           @acc = t % 256
         when "BNE"
           branch { @z == 0 }
@@ -165,28 +149,23 @@ module Vintage
         when "BCC"
           branch { @c == 0 }
         when "PHA"
-          @memory[STACK_OFFSET + @sp] = @acc
-          @sp -= 1
+          push(@acc)
         when "PLA"
-          @sp += 1
-          self.acc = @memory[STACK_OFFSET + @sp]
+          self.acc = pull
         when "JMP"
-          @memory.program_counter = int16(@memory.shift(2))
+          jump(@memory.shift(2))
         when "JSR"
          low, high = bytes(@memory.program_counter + 2)
-         @memory[STACK_OFFSET + @sp] = low
-         @sp -= 1
-         @memory[STACK_OFFSET + @sp] = high
-         @sp -= 1
 
-         @memory.program_counter = int16(@memory.shift(2))
+         push(low)
+         push(high)
+
+         jump(@memory.shift(2))
         when "RTS"
-          @sp += 1
-          h = @memory[STACK_OFFSET + @sp]
-          @sp += 1
-          l = @memory[STACK_OFFSET + @sp]
+          h = pull
+          l = pull
 
-          @memory.program_counter = int16([l, h])
+          jump([l, h])
         when "AND"
           self.acc = @acc & read(op.last)
         when "SEC"
@@ -217,6 +196,27 @@ module Vintage
     end
 
     private
+
+    def zp_update
+      address = @memory.shift
+
+      @memory[address] = yield(address)
+    end
+
+    def jump(tuple)
+      @memory.program_counter = int16(tuple)
+    end
+    
+    def push(value)
+      @memory[STACK_OFFSET + @sp] = value
+      @sp -= 1
+    end
+
+    def pull
+      @sp += 1
+
+      @memory[STACK_OFFSET + @sp]
+    end
 
     def compare(a,b)
       t  = a - b
