@@ -26,7 +26,7 @@ describe "Easy 6502" do
 
   example "Instructions #1" do
     processor.x.must_equal(0)
-    processor.acc.must_equal(0)
+    processor.a.must_equal(0)
 
     code = assemble '
       LDA #$c0
@@ -39,7 +39,7 @@ describe "Easy 6502" do
     processor.run(code)
 
     processor.x.must_equal(0xC1)
-    processor.acc.must_equal(0x84)
+    processor.a.must_equal(0x84)
   end
 
   example "Instructions #2" do
@@ -52,7 +52,7 @@ describe "Easy 6502" do
     processor.run(code)
 
     processor.memory[0x01].must_equal(0x80)
-    processor.acc.must_equal(0)
+    processor.a.must_equal(0)
   end
 
   example "Branching" do

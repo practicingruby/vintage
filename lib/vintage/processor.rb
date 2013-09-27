@@ -14,7 +14,7 @@ module Vintage
     end
 
     def initialize(memory)
-      @acc     = 0
+      @a     = 0
       @x       = 0
       @y       = 0
       @sp      = 255
@@ -24,7 +24,11 @@ module Vintage
       @memory  = memory
     end
 
-    attr_reader :acc, :x, :y, :memory, :z, :c, :n
+    attr_reader :a, :x, :y, :memory, :z, :c, :n
+
+    def reg
+      self
+    end
 
     def x=(new_x)
       @x = normalize(new_x)
@@ -34,8 +38,8 @@ module Vintage
       @y = normalize(new_y)
     end
 
-    def acc=(new_acc)
-      @acc = normalize(new_acc) 
+    def a=(new_a)
+      @a = normalize(new_a) 
     end
 
     def normalize(number)
@@ -93,25 +97,25 @@ module Vintage
 
         case op.first
         when "LDA"
-          self.acc = read(op.last)
+          reg.a = read(op.last)
         when "LDX"
-          self.x = read(op.last)
+          reg.x = read(op.last)
         when "LDY"
-          self.y = read(op.last)
+          reg.y = read(op.last)
         when "STA"
-          write(acc, op.last)
+          write(a, op.last)
         when "STX"
           write(x, op.last)
         when "TAX"
-          self.x = acc
+          reg.x = a
         when "TXA"
-          self.acc = x
+          reg.a = x
         when "INX"
-          self.x += 1 
+          reg.x += 1 
         when "INY"
-          self.y += 1
+          reg.y += 1
         when "DEX"
-          self.x -= 1
+          reg.x -= 1
         when "DEC"
           zp_update { |e| normalize(@memory[e] - 1) }
         when "INC" 
@@ -121,23 +125,23 @@ module Vintage
         when "CPY"
           compare(y, read(op.last))
         when "CMP"
-          compare(acc, read(op.last))
+          compare(a, read(op.last))
         when "ADC"
-          t = acc + read(op.last) + @c
+          t = a + read(op.last) + @c
 
-          @n   = acc[7]
+          @n   = a[7]
           @z   = (t == 0 ? 1 : 0)
 
           @c   = t > 255 ? 1 : 0
-          @acc = t % 256
+          @a = t % 256
         when "SBC"
-          t  = acc - read(op.last) - (@c == 0 ? 1 : 0)
+          t  = a - read(op.last) - (@c == 0 ? 1 : 0)
 
           @n = t[7]
           @z = (t == 0 ? 1 : 0)
 
           @c = (t >= 0 ? 1 : 0)
-          @acc = t % 256
+          @a = t % 256
         when "BNE"
           branch { @z == 0 }
         when "BEQ"
@@ -149,9 +153,9 @@ module Vintage
         when "BCC"
           branch { @c == 0 }
         when "PHA"
-          push(@acc)
+          push(@a)
         when "PLA"
-          self.acc = pull
+          self.a = pull
         when "JMP"
           jump(@memory.shift(2))
         when "JSR"
@@ -167,18 +171,18 @@ module Vintage
 
           jump([l, h])
         when "AND"
-          self.acc = @acc & read(op.last)
+          reg.a = @a & read(op.last)
         when "SEC"
           @c = 1
         when "CLC"
           @c = 0
         when "LSR"
           @n   = 0
-          @c   = acc[0]
-          @acc = (acc >> 1) % 127
-          @z   = (@acc == 0 ? 1 : 0)
+          @c   = a[0]
+          @a = (a >> 1) % 127
+          @z   = (@a == 0 ? 1 : 0)
         when "BIT"
-          bits = (acc & read(op.last))
+          bits = (a & read(op.last))
           
           bits.zero? ? @z = 1 : @z = 0
           @n = bits[7]
