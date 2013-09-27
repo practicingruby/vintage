@@ -86,6 +86,67 @@ module Vintage
       end
     end
 
+    # FIXME: This is just a placeholder
+    def operations
+      return @ops if @ops
+
+      # FIXME: replace with m.read, m.write(value) or similar
+
+      @ops = {
+        LDA: -> { reg.a = read(mode) },
+        LDX: -> { reg.x = read(mode) },
+        LDY: -> { reg.y = read(mode) },
+
+        STA: -> { write(a, mode) },
+        STX: -> { write(x, mode) },
+
+        TAX: -> { reg.x = a },
+        TXA: -> { reg.a = x },
+
+        INX: -> { reg.x += 1  },
+        INY: -> { reg.y += 1 },
+
+        DEX: -> { reg.x -= 1 },
+
+        DEC: -> { zp_update { |e| normalize(@memory[e] - 1) } },
+        INC: -> { zp_update { |e| normalize(@memory[e] + 1) } },
+
+        CPX: -> { compare(x, read(mode)) },
+        CPY: -> { compare(y, read(mode)) },
+        CMP: -> { compare(a, read(mode)) },
+
+        ADC: -> { add(read(mode)) },
+        SBC: -> { subtract(read(mode)) },
+
+        BNE: -> { branch(@z == 0) },
+        BEQ: -> { branch(@z == 1) },
+        BPL: -> { branch(@n == 0) },
+        BCS: -> { branch(@c == 1) },
+        BCC: -> { branch(@c == 0) },
+        
+        PHA: -> { push(@a) },
+        PLA: -> { reg.a = pull },
+
+        JMP: -> { jump(@memory.shift(2)) },
+
+        JSR: -> { jsr }, # NOTE: IS THIS EXCESS ABSTRACTION? 
+        RTS: -> { rts },
+
+        AND: -> { reg.a &= read(mode) },
+
+        SEC: -> { @c = 1 },
+        CLC: -> { @c = 0 },
+
+        LSR: -> { lsr }, 
+        BIT: -> { bit(read(mode)) },
+
+        NOP: -> {},
+        BRK: -> { raise StopIteration }
+      }
+    end
+
+    attr_accessor :mode # FIXME: Ugly hack, roll into m.read / m.write(value) fix
+
     def run(bytecode)
       @memory.load(bytecode)
 
@@ -93,113 +154,38 @@ module Vintage
         code = @memory.shift
 
         return unless code
-        op = self.class.opcodes[code]
+        name, mode = self.class.opcodes[code]
 
-        case op.first
-        when "LDA"
-          reg.a = read(op.last)
-        when "LDX"
-          reg.x = read(op.last)
-        when "LDY"
-          reg.y = read(op.last)
-        when "STA"
-          write(a, op.last)
-        when "STX"
-          write(x, op.last)
-        when "TAX"
-          reg.x = a
-        when "TXA"
-          reg.a = x
-        when "INX"
-          reg.x += 1 
-        when "INY"
-          reg.y += 1
-        when "DEX"
-          reg.x -= 1
-        when "DEC"
-          zp_update { |e| normalize(@memory[e] - 1) }
-        when "INC" 
-          zp_update { |e| normalize(@memory[e] + 1) }
-        when "CPX"
-          compare(x, read(op.last))
-        when "CPY"
-          compare(y, read(op.last))
-        when "CMP"
-          compare(a, read(op.last))
-        when "ADC"
-          t = a + read(op.last) + @c
-
-          @n   = a[7]
-          @z   = (t == 0 ? 1 : 0)
-
-          @c   = t > 255 ? 1 : 0
-          @a = t % 256
-        when "SBC"
-          t  = a - read(op.last) - (@c == 0 ? 1 : 0)
-
-          @n = t[7]
-          @z = (t == 0 ? 1 : 0)
-
-          @c = (t >= 0 ? 1 : 0)
-          @a = t % 256
-        when "BNE"
-          branch { @z == 0 }
-        when "BEQ"
-          branch { @z == 1 }
-        when "BPL"
-          branch { @n == 0 }
-        when "BCS"
-          branch { @c == 1 }
-        when "BCC"
-          branch { @c == 0 }
-        when "PHA"
-          push(@a)
-        when "PLA"
-          self.a = pull
-        when "JMP"
-          jump(@memory.shift(2))
-        when "JSR"
-         low, high = bytes(@memory.program_counter + 2)
-
-         push(low)
-         push(high)
-
-         jump(@memory.shift(2))
-        when "RTS"
-          h = pull
-          l = pull
-
-          jump([l, h])
-        when "AND"
-          reg.a = @a & read(op.last)
-        when "SEC"
-          @c = 1
-        when "CLC"
-          @c = 0
-        when "LSR"
-          @n   = 0
-          @c   = a[0]
-          @a = (a >> 1) % 127
-          @z   = (@a == 0 ? 1 : 0)
-        when "BIT"
-          bits = (a & read(op.last))
-          
-          bits.zero? ? @z = 1 : @z = 0
-          @n = bits[7]
-        when "NOP"
-        when "BRK"
-          return
+        if name
+          self.mode = mode
+          instance_exec(&operations[name.to_sym])
         else
-          if op
-            raise LoadError, "#{op.inspect} not handled"
-          else
-            raise LoadError, "No operator matches code: #{'%.2x' % code}"
-          end
+         raise LoadError, "No operator matches code: #{'%.2x' % code}"
         end
       end
     end
 
     private
+
+    def add(value)
+      t = @a + value + @c
+
+      @n   = @a[7]
+      @z   = (t == 0 ? 1 : 0)
+
+      @c   = t > 255 ? 1 : 0
+      @a = t % 256
+    end
+
+    def subtract(value)
+      t  = a - value - (@c == 0 ? 1 : 0)
+
+      @n = t[7]
+      @z = (t == 0 ? 1 : 0)
+
+      @c = (t >= 0 ? 1 : 0)
+      @a = t % 256
+    end
 
     def zp_update
       address = @memory.shift
@@ -210,7 +196,37 @@ module Vintage
     def jump(tuple)
       @memory.program_counter = int16(tuple)
     end
+
+    def jsr
+      low, high = bytes(@memory.program_counter + 2)
+
+      push(low)
+      push(high)
+
+      jump(@memory.shift(2)) 
+    end
+
+    def rts
+      h = pull
+      l = pull
+
+      jump([l, h])
+    end
+
+    def lsr
+      @n  = 0
+      @c  = a[0]
+      @a  = (a >> 1) % 127
+      @z  = (@a == 0 ? 1 : 0)
+    end
     
+    def bit(value)
+      bits = (a & value)
+      
+      bits.zero? ? @z = 1 : @z = 0
+      @n = bits[7]
+    end
+
     def push(value)
       @memory[STACK_OFFSET + @sp] = value
       @sp -= 1
@@ -230,8 +246,8 @@ module Vintage
       @z = (t == 0 ? 1 : 0)
     end
 
-    def branch
-      if yield
+    def branch(test)
+      if test
         offset = @memory.shift
 
         if offset <= 0x80
