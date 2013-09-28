@@ -22,9 +22,17 @@ module Vintage
       @c       = 0 # ........................................................
       @n       = 0
       @memory  = memory
+
+      dir  = File.dirname(__FILE__)
+      instance_eval(File.read("#{dir}/../../config/6502.rb"))
     end
 
     attr_reader :a, :x, :y, :memory, :z, :c, :n
+
+    def method_missing(m, *a, &b)
+      return super unless m = m.upcase
+      singleton_class.send(:define_method, m, *a, &b)
+    end
 
     def reg
       self
@@ -86,65 +94,6 @@ module Vintage
       end
     end
 
-    # FIXME: This is just a placeholder
-    def operations
-      return @ops if @ops
-
-      # FIXME: replace with m.read, m.write(value) or similar
-
-      @ops = {
-        LDA: -> { reg.a = read(mode) },
-        LDX: -> { reg.x = read(mode) },
-        LDY: -> { reg.y = read(mode) },
-
-        STA: -> { write(a, mode) },
-        STX: -> { write(x, mode) },
-
-        TAX: -> { reg.x = a },
-        TXA: -> { reg.a = x },
-
-        INX: -> { reg.x += 1  },
-        INY: -> { reg.y += 1 },
-
-        DEX: -> { reg.x -= 1 },
-
-        DEC: -> { zp_update { |e| normalize(@memory[e] - 1) } },
-        INC: -> { zp_update { |e| normalize(@memory[e] + 1) } },
-
-        CPX: -> { compare(x, read(mode)) },
-        CPY: -> { compare(y, read(mode)) },
-        CMP: -> { compare(a, read(mode)) },
-
-        ADC: -> { add(read(mode)) },
-        SBC: -> { subtract(read(mode)) },
-
-        BNE: -> { branch(@z == 0) },
-        BEQ: -> { branch(@z == 1) },
-        BPL: -> { branch(@n == 0) },
-        BCS: -> { branch(@c == 1) },
-        BCC: -> { branch(@c == 0) },
-        
-        PHA: -> { push(@a) },
-        PLA: -> { reg.a = pull },
-
-        JMP: -> { jump(@memory.shift(2)) },
-
-        JSR: -> { jsr }, # NOTE: IS THIS EXCESS ABSTRACTION? 
-        RTS: -> { rts },
-
-        AND: -> { reg.a &= read(mode) },
-
-        SEC: -> { @c = 1 },
-        CLC: -> { @c = 0 },
-
-        LSR: -> { lsr }, 
-        BIT: -> { bit(read(mode)) },
-
-        NOP: -> {},
-        BRK: -> { raise StopIteration }
-      }
-    end
-
     attr_accessor :mode # FIXME: Ugly hack, roll into m.read / m.write(value) fix
 
     def run(bytecode)
@@ -157,8 +106,8 @@ module Vintage
         name, mode = self.class.opcodes[code]
 
         if name
-          self.mode = mode
-          instance_exec(&operations[name.to_sym])
+          self.mode = mode # HACK!
+          send(name)
         else
          raise LoadError, "No operator matches code: #{'%.2x' % code}"
         end
