@@ -23,7 +23,7 @@ module Vintage
       bytecode.each_with_index { |c,i| @memory[index+i] = c }
     end
 
-    def shift(n=1)
+    def next(n=1)
       bytes = []
 
       n.times do

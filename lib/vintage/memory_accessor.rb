@@ -29,27 +29,27 @@ module Vintage
       @processor.instance_exec(@mode) do |mode|
         case mode
         when "IM", "ZP", "@"
-          @memory.shift
+          @memory.next
         when "ZX"
-          (@memory.shift + x) % 256
+          (@memory.next + x) % 256
         when "IX"
-          m = @memory.shift
+          m = @memory.next
 
           l = @memory[m + x]
           h = @memory[m + x + 1]
 
          int16([l, h])
         when "IY"
-          m = @memory.shift
+          m = @memory.next
 
           l = @memory[m]
           h = @memory[m + 1]
 
           int16([l,h]) + y
         when "AB"
-          int16(@memory.shift(2))
+          int16(@memory.next(2))
         when "AY"
-          int16(@memory.shift(2)) + y
+          int16(@memory.next(2)) + y
         when "#"
           # do nothing
         else

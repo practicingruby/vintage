@@ -29,9 +29,9 @@ module Vintage
 
     attr_reader :a, :x, :y, :memory, :z, :c, :n
 
-    def method_missing(m, *a, &b)
-      return super unless m = m.upcase
-      singleton_class.send(:define_method, m, *a, &b)
+    def method_missing(id, *a, &b)
+      return super unless id == id.upcase
+      singleton_class.send(:define_method, id, *a, &b)
     end
 
     def reg
@@ -58,24 +58,20 @@ module Vintage
       number
     end
 
-    attr_accessor :cell # FIXME: name
+    attr_accessor :m
 
     def run(bytecode)
       @memory.load(bytecode)
 
-
       loop do
-        # NOTE: Can the next few lines be moved into Storage somehow?
-        # hiding some of the implementation details?
-        # (making it so processor never calls shift(), and its
-        # config always works with a cell object.
-        code = @memory.shift
+        # FIXME: There should be a better way to do this
+        code = @memory.next
 
         return unless code
         name, mode = self.class.opcodes[code]
 
         if name
-          self.cell = MemoryAccessor.new(self, mode)
+          self.m = MemoryAccessor.new(self, mode)
 
           send(name)
         else
@@ -107,7 +103,7 @@ module Vintage
     end
 
     def jump
-      @memory.program_counter = cell.address
+      @memory.program_counter = m.address
     end
 
     def jsr
@@ -160,14 +156,14 @@ module Vintage
     end
 
     def branch(test)
-      if test
-        offset = @cell.address
+      return unless test
 
-        if offset <= 0x80
-          @memory.program_counter += offset
-        else
-          @memory.program_counter -= (0xff - offset + 1)
-        end
+      offset = m.address
+       
+      if offset <= 0x80
+        @memory.program_counter += offset
+      else
+        @memory.program_counter -= (0xff - offset + 1)
       end
     end
 

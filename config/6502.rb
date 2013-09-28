@@ -1,9 +1,9 @@
-LDA { reg.a = cell.value }
-LDX { reg.x = cell.value }
-LDY { reg.y = cell.value }
+LDA { reg.a = m.value }
+LDX { reg.x = m.value }
+LDY { reg.y = m.value }
 
-STA { cell.value = reg.a }
-STX { cell.value = reg.x }
+STA { m.value = reg.a }
+STX { m.value = reg.x }
 
 TAX { reg.x = a }
 TXA { reg.a = x }
@@ -12,15 +12,15 @@ INX { reg.x += 1  }
 INY { reg.y += 1 }
 
 DEX { reg.x -= 1 }
-DEC { cell.value = normalize(cell.value - 1) }
-INC { cell.value = normalize(cell.value + 1) } 
+DEC { m.value = normalize(m.value - 1) }
+INC { m.value = normalize(m.value + 1) } 
 
-CPX { compare(x, cell.value) }
-CPY { compare(y, cell.value) }
-CMP { compare(a, cell.value) }
+CPX { compare(x, m.value) }
+CPY { compare(y, m.value) }
+CMP { compare(a, m.value) }
 
-ADC { add(cell.value) }
-SBC { subtract(cell.value) }
+ADC { add(m.value) }
+SBC { subtract(m.value) }
 
 BNE { branch(z == 0) }
 BEQ { branch(z == 1) }
@@ -36,13 +36,13 @@ JMP { jump }
 JSR { jsr }
 RTS { rts }
 
-AND { reg.a &= cell.value }
+AND { reg.a &= m.value }
 
 SEC { @c = 1 }
 CLC { @c = 0 }
 
 LSR { lsr }
-BIT { bit(cell.value) }
+BIT { bit(m.value) }
 
 NOP { }
 BRK { raise StopIteration }
