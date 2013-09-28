@@ -63,7 +63,12 @@ module Vintage
     def run(bytecode)
       @memory.load(bytecode)
 
+
       loop do
+        # NOTE: Can the next few lines be moved into Storage somehow?
+        # hiding some of the implementation details?
+        # (making it so processor never calls shift(), and its
+        # config always works with a cell object.
         code = @memory.shift
 
         return unless code
@@ -102,11 +107,11 @@ module Vintage
     end
 
     def jump
-      @memory.program_counter = int16(@memory.shift(2))
+      @memory.program_counter = cell.address
     end
 
     def jsr
-      low, high = bytes(@memory.program_counter + 2)
+      low, high = bytes(@memory.program_counter)
 
       push(low)
       push(high)
@@ -156,15 +161,13 @@ module Vintage
 
     def branch(test)
       if test
-        offset = @memory.shift
+        offset = @cell.address
 
         if offset <= 0x80
           @memory.program_counter += offset
         else
           @memory.program_counter -= (0xff - offset + 1)
         end
-      else
-        @memory.shift
       end
     end
 

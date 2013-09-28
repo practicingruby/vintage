@@ -52,11 +52,11 @@ module Vintage
             bytecode << lookup[["BNE", "@"]]
             bytecode << $1.strip
           when /JMP (.*)\s*\Z/
-            bytecode << lookup[["JMP", "#"]]
+            bytecode << lookup[["JMP", "AB"]]
             bytecode << $1.strip
             bytecode << nil # FIXME: this is a placeholder for byte counting
           when /JSR (.*)\s*\Z/
-            bytecode << lookup[["JSR", "#"]]
+            bytecode << lookup[["JSR", "AB"]]
             bytecode << $1.strip
             bytecode << nil # FIXME: this is a placeholder for byte counting
           when /RTS/

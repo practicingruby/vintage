@@ -6,6 +6,8 @@ module Vintage
 
       @address   = computed_address
     end
+
+    attr_reader :address
     
     def value
       raise NotImplementedError if ["#", "@"].include?(@mode)
@@ -26,7 +28,7 @@ module Vintage
     def computed_address
       @processor.instance_exec(@mode) do |mode|
         case mode
-        when "IM", "ZP"
+        when "IM", "ZP", "@"
           @memory.shift
         when "ZX"
           (@memory.shift + x) % 256
@@ -48,7 +50,7 @@ module Vintage
           int16(@memory.shift(2))
         when "AY"
           int16(@memory.shift(2)) + y
-        when "#", "@"
+        when "#"
           # do nothing
         else
           raise NotImplementedError, mode.inspect
