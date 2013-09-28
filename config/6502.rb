@@ -12,8 +12,8 @@ INX { reg.x += 1  }
 INY { reg.y += 1 }
 
 DEX { reg.x -= 1 }
-DEC { zp_update { |e| normalize(@memory[e] - 1) } }
-INC { zp_update { |e| normalize(@memory[e] + 1) } }
+DEC { zp_update { |e| normalize(memory[e] - 1) } }
+INC { zp_update { |e| normalize(memory[e] + 1) } }
 
 CPX { compare(x, read(mode)) }
 CPY { compare(y, read(mode)) }
@@ -22,16 +22,16 @@ CMP { compare(a, read(mode)) }
 ADC { add(read(mode)) }
 SBC { subtract(read(mode)) }
 
-BNE { branch(@z == 0) }
-BEQ { branch(@z == 1) }
-BPL { branch(@n == 0) }
-BCS { branch(@c == 1) }
-BCC { branch(@c == 0) }
+BNE { branch(z == 0) }
+BEQ { branch(z == 1) }
+BPL { branch(n == 0) }
+BCS { branch(c == 1) }
+BCC { branch(c == 0) }
 
-PHA { push(@a) }
+PHA { push(reg.a) }
 PLA { reg.a = pull }
 
-JMP { jump(@memory.shift(2)) }
+JMP { jump(memory.shift(2)) }
 
 JSR { jsr }
 RTS { rts }
