@@ -1,9 +1,9 @@
-LDA { reg.a = read(mode) }
-LDX { reg.x = read(mode) }
-LDY { reg.y = read(mode) }
+LDA { reg.a = cell.value }
+LDX { reg.x = cell.value }
+LDY { reg.y = cell.value }
 
-STA { write(a, mode) }
-STX { write(x, mode) }
+STA { cell.value = reg.a }
+STX { cell.value = reg.x }
 
 TAX { reg.x = a }
 TXA { reg.a = x }
@@ -12,15 +12,15 @@ INX { reg.x += 1  }
 INY { reg.y += 1 }
 
 DEX { reg.x -= 1 }
-DEC { zp_update { |e| normalize(memory[e] - 1) } }
-INC { zp_update { |e| normalize(memory[e] + 1) } }
+DEC { cell.value = normalize(cell.value - 1) }
+INC { cell.value = normalize(cell.value + 1) } 
 
-CPX { compare(x, read(mode)) }
-CPY { compare(y, read(mode)) }
-CMP { compare(a, read(mode)) }
+CPX { compare(x, cell.value) }
+CPY { compare(y, cell.value) }
+CMP { compare(a, cell.value) }
 
-ADC { add(read(mode)) }
-SBC { subtract(read(mode)) }
+ADC { add(cell.value) }
+SBC { subtract(cell.value) }
 
 BNE { branch(z == 0) }
 BEQ { branch(z == 1) }
@@ -31,18 +31,18 @@ BCC { branch(c == 0) }
 PHA { push(reg.a) }
 PLA { reg.a = pull }
 
-JMP { jump(memory.shift(2)) }
+JMP { jump }
 
 JSR { jsr }
 RTS { rts }
 
-AND { reg.a &= read(mode) }
+AND { reg.a &= cell.value }
 
 SEC { @c = 1 }
 CLC { @c = 0 }
 
 LSR { lsr }
-BIT { bit(read(mode)) }
+BIT { bit(cell.value) }
 
 NOP { }
 BRK { raise StopIteration }

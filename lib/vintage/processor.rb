@@ -58,43 +58,7 @@ module Vintage
       number
     end
 
-    def read(mode)
-      case mode
-      when "IM"
-        @memory.shift
-      when "ZP"
-        @memory[@memory.shift]
-      when "ZX"
-        @memory[(@memory.shift + x) % 256]
-      end
-    end
-
-    def write(value, mode)
-      case mode
-      when "AB"
-        @memory[int16(@memory.shift(2))] = value
-      when "AY"
-        @memory[int16(@memory.shift(2)) + y] = value
-      when "ZP"
-        @memory[@memory.shift] = value
-      when "ZX"
-        @memory[(@memory.shift + x) % 256] = value
-      when "IX"
-        address = @memory.shift
-        l = @memory[address + x]
-        h = @memory[address + x + 1]
-
-        @memory[int16([l, h])] = value
-      when "IY"
-        address = @memory.shift
-        l = @memory[address]
-        h = @memory[address + 1]
-
-        @memory[int16([l,h]) + y] = value
-      end
-    end
-
-    attr_accessor :mode # FIXME: Ugly hack, roll into m.read / m.write(value) fix
+    attr_accessor :cell # FIXME: name
 
     def run(bytecode)
       @memory.load(bytecode)
@@ -106,7 +70,8 @@ module Vintage
         name, mode = self.class.opcodes[code]
 
         if name
-          self.mode = mode # HACK!
+          self.cell = MemoryAccessor.new(self, mode)
+
           send(name)
         else
          raise LoadError, "No operator matches code: #{'%.2x' % code}"
@@ -136,14 +101,8 @@ module Vintage
       @a = t % 256
     end
 
-    def zp_update
-      address = @memory.shift
-
-      @memory[address] = yield(address)
-    end
-
-    def jump(tuple)
-      @memory.program_counter = int16(tuple)
+    def jump
+      @memory.program_counter = int16(@memory.shift(2))
     end
 
     def jsr
@@ -152,14 +111,14 @@ module Vintage
       push(low)
       push(high)
 
-      jump(@memory.shift(2)) 
+      jump
     end
 
     def rts
       h = pull
       l = pull
 
-      jump([l, h])
+      @memory.program_counter = int16([l, h])
     end
 
     def lsr
