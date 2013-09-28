@@ -1,5 +1,0 @@
-LDA #$c0
-TAX
-INX
-ADC #$c4
-BRK

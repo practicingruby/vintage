@@ -5,18 +5,34 @@ module Vintage
     def initialize(&callback)
       @memory          = Hash.new(0)
       @program_counter = PROGRAM_OFFSET
-      @write_callbacks = []
+      @watchers        = []
+      @masks           = []
     end
 
-    def watch(&block)
-      @write_callbacks << block
+    def mask(filter, &callback)
+      @masks << [filter, callback]
+    end
+
+    def watch(filter, &callback)
+      @watchers << [filter, callback]
     end
 
     attr_accessor :program_counter
 
-    # FIXME: Unify with callbacks somehow, or have multiple callbacks.
     def [](address)
-      address == 0xfe ? rand(0xff) : @memory[address]
+      @masks.each do |filter, callback| 
+        return callback.call if filter === address 
+      end
+
+      @memory[address]
+    end
+
+    def []=(address, value)
+      @memory[address] = value
+
+      @watchers.each do |filter, callback| 
+         callback.call(address, value) if filter === address
+      end
     end
 
     def load(bytecode)
@@ -34,12 +50,6 @@ module Vintage
       end
 
       n == 1 ? bytes.first : bytes
-    end
-
-    def []=(address, value)
-      @memory[address] = value
-
-      @write_callbacks.each { |c| c.call(address, value) }
     end
   end
 end

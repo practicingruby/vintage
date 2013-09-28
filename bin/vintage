@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require_relative "../lib/vintage"
+require_relative "../lib/vintage/visualization"
+
+Vintage::Simulator.run(ARGV[0], Vintage::Visualization.new)

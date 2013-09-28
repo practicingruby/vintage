@@ -20,9 +20,22 @@ module Vintage
 
     Pixel = Struct.new(:x, :y, :color)
     
-    # FIXME: Still not 100% compatible w. Easy6502 colors
-    Colors = [:black,  :white, :red,   :cyan,  :magenta, :green, :blue,  :yellow, 
-              :orange, :pink, :red, :darkGray, :gray,  :green, :blue, :lightGray ]
+    Colors = [ Color.black,
+               Color.white, 
+               Color.red,  
+               Color.cyan,  
+               Color.magenta,
+               Color.green,
+               Color.blue,
+               Color.yellow, 
+               Color.orange, 
+               Color.new(156, 93, 82),
+               Color.pink,
+               Color.darkGray, 
+               Color.gray,  
+               Color.green.brighter,
+               Color.blue.brighter,
+               Color.lightGray ]
 
 
     class Panel < JPanel
@@ -34,18 +47,21 @@ module Vintage
     end
 
     class KeyCapture < KeyAdapter
-      attr_accessor :memory
+      attr_accessor :ui
 
       def keyPressed(e)
-        memory[0xff] = e.getKeyChar
+        ui.last_keypress = e.getKeyChar
       end
     end
 
-    def initialize(memory)
+    attr_accessor :last_keypress
+
+    def initialize
       @panel = Panel.new
       @panel.interface = self
       @new   = true
       @pixels = []
+      @last_keypress = 0
       
       @panel.setPreferredSize(Dimension.new(SCALE * DIMENSIONS,
                                            SCALE * DIMENSIONS))
@@ -53,21 +69,22 @@ module Vintage
       @panel.setFocusable(true)
       
       key_capture = KeyCapture.new
-      key_capture.memory = memory
+      key_capture.ui = self
       @panel.addKeyListener(key_capture)
 
-      memory.watch { |k,v| update(k,v) if (0x0200...0x05ff).include?(k) }
 
       frame = JFrame.new
+      frame.setDefaultCloseOperation JFrame::EXIT_ON_CLOSE
+
       frame.add(@panel)
       frame.pack
       frame.show
     end
 
-    def update(key, value)
+    def update(x, y, c)
       sleep 0.03
 
-      @pixels.push(Pixel.new(key % 32, (key - 0x200) / 32, Colors[value % 16]))
+      @pixels.push(Pixel.new(x, y, Colors[c]))
       @panel.repaint
     end
 
@@ -90,9 +107,7 @@ module Vintage
       @new = false
 
       @pixels.each do |pixel|
-        color = Color.send(pixel.color)
-
-        fill_cell(bg, pixel.x, pixel.y, color)
+        fill_cell(bg, pixel.x, pixel.y, pixel.color)
       end
 
       g.drawImage(img, 0, 0, nil)
@@ -101,4 +116,3 @@ module Vintage
   end
 
 end
-
