@@ -27,10 +27,7 @@ module Vintage
     def run(bytecode)
       mem.load(bytecode)
 
-      loop do 
-        code = mem.next
-        code ? execute(code) : break
-      end
+      loop { execute(mem.next) } 
     end
 
     def execute(code)
