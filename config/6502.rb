@@ -61,7 +61,7 @@ ADC {
 }
 
 SBC {
-  t  = a - m.value - (@c == 0 ? 1 : 0)
+  t  = reg.a - m.value - (@c == 0 ? 1 : 0)
 
   set(:a, t) { t >= 0 }
 }
