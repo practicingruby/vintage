@@ -29,18 +29,8 @@ BPL { mem.branch(cpu[:n] == 0, ref) }
 BCS { mem.branch(cpu[:c] == 1, ref) }
 BCC { mem.branch(cpu[:c] == 0, ref) }
 
-# NOTE: These instructions are currently untested, but
-# stack is implicitly used by JSR.
-PHA { mem.push(cpu[:a]) }
-PLA { cpu[:a] = mem.pull }
-
-# TODO: convert to a mem instruction and inline (mem.jump)
 JMP { mem.jump(ref) }
-
-# TODO: convert to a mem instruction and inline (mem.jsr)
 JSR { mem.jsr(ref) }
-
-# TODO: convert to a mem instruction and inline (mem.rts)
 RTS { mem.rts }
 
 AND { cpu[:a] &= ref.value }
