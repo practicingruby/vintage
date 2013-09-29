@@ -1,67 +1,72 @@
 NOP { }                         # does nothing
 BRK { raise StopIteration }     # halts execution
 
-LDA { reg.a = m.value }
-LDX { reg.x = m.value }
-LDY { reg.y = m.value }
+LDA { cpu[:a] = ref.value }
+LDX { cpu[:x] = ref.value }
+LDY { cpu[:y] = ref.value }
 
-STA { m.value = reg.a }
-STX { m.value = reg.x }
+STA { ref.value = cpu[:a] }
+STX { ref.value = cpu[:x] }
 
-TAX { reg.x = reg.a }
-TXA { reg.a = reg.x }
+TAX { cpu[:x] = cpu[:a] }
+TXA { cpu[:a] = cpu[:x] }
 
-INX { reg.x += 1  }
-INY { reg.y += 1 }
+INX { cpu[:x] += 1 }
+INY { cpu[:y] += 1 }
 
-DEX { reg.x -= 1 }
-DEC { set(m, m.value - 1) }
-INC { set(m, m.value + 1) } 
+DEX { cpu[:x] -= 1 }
 
-CPX { compare(x, m.value) }
-CPY { compare(y, m.value) }
-CMP { compare(a, m.value) }
+DEC { ref.value = cpu.result(ref.value - 1) }
+INC { ref.value = cpu.result(ref.value + 1) } 
 
-BNE { branch(z == 0) }
-BEQ { branch(z == 1) }
-BPL { branch(n == 0) }
-BCS { branch(c == 1) }
-BCC { branch(c == 0) }
+CPX { cpu.compare(cpu[:x], ref.value) }
+CPY { cpu.compare(cpu[:y], ref.value) }
+CMP { cpu.compare(cpu[:a], ref.value) }
 
-# TODO: convert to a memory instruction and inline
-PHA { push(reg.a) }
-PLA { reg.a = pull }
+BNE { mem.branch(cpu[:z] == 0, ref) }
+BEQ { mem.branch(cpu[:z] == 1, ref) }
+BPL { mem.branch(cpu[:n] == 0, ref) }
+BCS { mem.branch(cpu[:c] == 1, ref) }
+BCC { mem.branch(cpu[:c] == 0, ref) }
 
-# TODO: convert to a memory instruction and inline (memory.jump)
-JMP { jump }
+# NOTE: These instructions are currently untested, but
+# stack is implicitly used by JSR.
+PHA { mem.push(cpu[:a]) }
+PLA { cpu[:a] = mem.pull }
 
-# TODO: convert to a memory instruction and inline (memory.jsr)
-JSR { jsr }
+# TODO: convert to a mem instruction and inline (mem.jump)
+JMP { mem.jump(ref) }
 
-# TODO: convert to a memory instruction and inline (memory.rts)
-RTS { rts }
+# TODO: convert to a mem instruction and inline (mem.jsr)
+JSR { mem.jsr(ref) }
 
-AND { reg.a &= m.value }
+# TODO: convert to a mem instruction and inline (mem.rts)
+RTS { mem.rts }
 
-SEC { @c = 1 }
-CLC { @c = 0 }
+AND { cpu[:a] &= ref.value }
 
-BIT { normalize(a & m.value) }
+SEC { cpu.set_carry   }
+CLC { cpu.clear_carry }
+
+BIT { cpu.result(cpu[:a] & ref.value) }
 
 LSR { 
-  t = (reg.a >> 1) & 0x7F
+  t = (cpu[:a] >> 1) & 0x7F
  
-  set(:a, t) { reg.a[0] == 1 } 
+  cpu.update_carry { cpu[:a][0] == 1 } 
+  cpu[:a] = t
 }
 
 ADC { 
-  t = reg.a + m.value + @c
+  t = cpu[:a] + ref.value + cpu[:c]
 
-  set(:a, t) { t > 0xff }
+  cpu.update_carry { t > 0xff }
+  cpu[:a] = t
 }
 
 SBC {
-  t  = reg.a - m.value - (@c == 0 ? 1 : 0)
+  t  = cpu[:a] - ref.value - (cpu[:c] == 0 ? 1 : 0)
 
-  set(:a, t) { t >= 0 }
+  cpu.update_carry{ t >= 0 }
+  cpu[:a] = t
 }

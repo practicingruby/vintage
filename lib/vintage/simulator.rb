@@ -1,13 +1,69 @@
+require "csv"
+
 module Vintage
   class Simulator
+    CONFIG_DIR = "#{File.dirname(__FILE__)}/../../config"
+
+    include NumericHelpers
+
     def self.run(file, ui)
-      memory = Vintage::Storage.new
+      mem = Vintage::Storage.new
+      cpu = Vintage::CPU.new
 
-      memory.extend(MemoryMap)
-      memory.ui = ui
+      mem.extend(MemoryMap)
+      mem.ui = ui
 
-      processor = Vintage::Processor.new(memory)
-      processor.run(File.binread(file).unpack("C*"))
+      new(mem, cpu).run(File.binread(file).unpack("C*"))
+    end
+
+    def initialize(mem, cpu)
+      @mem = mem
+      @cpu = cpu
+
+      load_codes("#{CONFIG_DIR}/6502.csv")
+      load_definitions("#{CONFIG_DIR}/6502.rb")
+    end
+
+    attr_reader :mem, :cpu, :ref
+
+    def run(bytecode)
+      mem.load(bytecode)
+
+      loop do 
+        code = mem.next
+        code ? execute(code) : break
+      end
+    end
+
+    def execute(code)
+      raise StopIteration unless code
+
+      name, mode = @opcodes[code]
+
+      if name
+        @ref = MemoryAccessor.new(self, mode)
+
+        instance_exec(&@operations[name])
+      else
+        raise LoadError, "No operator matches code: #{'%.2x' % code}"
+      end
+    end
+
+    def load_codes(file)
+      @opcodes = Hash[CSV.read(file)
+                         .map { |r| [Integer(r[0], 16), [r[1].to_sym, r[2]]] }]
+    end
+
+    def load_definitions(file)
+      @operations = {}
+
+      instance_eval(File.read(file))
+    end
+
+    def method_missing(id, *a, &b)
+      return super unless id == id.upcase
+
+      @operations[id] = b
     end
   end
 end

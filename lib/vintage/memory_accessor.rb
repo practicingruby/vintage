@@ -14,13 +14,13 @@ module Vintage
       return @address           if @mode == "IM"
 
 
-      @processor.memory[@address]
+      @processor.mem[@address]
     end
 
     def value=(e) 
       raise NotImplementedError if ["IM", "#", "@"].include?(@mode)
 
-      @processor.memory[@address] = e
+      @processor.mem[@address] = e
     end
 
     private
@@ -29,27 +29,27 @@ module Vintage
       @processor.instance_exec(@mode) do |mode|
         case mode
         when "IM", "ZP", "@"
-          @memory.next
+          mem.next
         when "ZX"
-          (@memory.next + x) % 256
+          (mem.next + cpu[:x]) % 256
         when "IX"
-          m = @memory.next
+          m = mem.next
 
-          l = @memory[m + x]
-          h = @memory[m + x + 1]
+          l = mem[m + cpu[:x]]
+          h = mem[m + cpu[:x] + 1]
 
          int16([l, h])
         when "IY"
-          m = @memory.next
+          m = mem.next
 
-          l = @memory[m]
-          h = @memory[m + 1]
+          l = mem[m]
+          h = mem[m + 1]
 
-          int16([l,h]) + y
+          int16([l,h]) + cpu[:y]
         when "AB"
-          int16(@memory.next(2))
+          int16(mem.next(2))
         when "AY"
-          int16(@memory.next(2)) + y
+          int16(mem.next(2)) + cpu[:y]
         when "#"
           # do nothing
         else

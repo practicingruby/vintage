@@ -1,5 +1,6 @@
+require_relative "vintage/numeric_helpers"
+require_relative "vintage/cpu"
 require_relative "vintage/storage"
-require_relative "vintage/processor"
 require_relative "vintage/memory_map"
 require_relative "vintage/memory_accessor"
 require_relative "vintage/simulator"
