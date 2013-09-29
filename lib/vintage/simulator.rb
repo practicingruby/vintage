@@ -53,15 +53,7 @@ module Vintage
     end
 
     def load_definitions(file)
-      @definitions = {}
-
-      instance_eval(File.read(file))
-    end
-
-    def method_missing(id, *a, &b)
-      return super unless id == id.upcase
-
-      @definitions[id] = b
+      @definitions = Vintage::DSL.definitions(File.read(file))
     end
   end
 end
