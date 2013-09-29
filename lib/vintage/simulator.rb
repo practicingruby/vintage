@@ -4,8 +4,6 @@ module Vintage
   class Simulator
     CONFIG_DIR = "#{File.dirname(__FILE__)}/../../config"
 
-    include NumericHelpers
-
     def self.run(file, ui)
       mem = Vintage::Storage.new
       cpu = Vintage::CPU.new
@@ -38,24 +36,24 @@ module Vintage
     def execute(code)
       raise StopIteration unless code
 
-      name, mode = @opcodes[code]
+      name, mode = @codes[code]
 
       if name
-        @ref = MemoryAccessor.new(self, mode)
+        @ref = Reference.new(cpu, mem, mode)
 
-        instance_exec(&@operations[name])
+        instance_exec(&@definitions[name])
       else
         raise LoadError, "No operator matches code: #{'%.2x' % code}"
       end
     end
 
     def load_codes(file)
-      @opcodes = Hash[CSV.read(file)
-                         .map { |r| [Integer(r[0], 16), [r[1].to_sym, r[2]]] }]
+      @codes = Hash[CSV.read(file)
+                       .map { |r| [Integer(r[0], 16), [r[1].to_sym, r[2]]] }]
     end
 
     def load_definitions(file)
-      @operations = {}
+      @definitions = {}
 
       instance_eval(File.read(file))
     end
@@ -63,7 +61,7 @@ module Vintage
     def method_missing(id, *a, &b)
       return super unless id == id.upcase
 
-      @operations[id] = b
+      @definitions[id] = b
     end
   end
 end
