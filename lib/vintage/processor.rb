@@ -4,6 +4,8 @@ module Vintage
   class Processor
     STACK_OFFSET = 0x0100
 
+    # TODO: MOVE INTO SOME SORT OF BUILDER PROXY
+
     def self.opcodes
       return @opcodes if @opcodes
 
@@ -29,6 +31,8 @@ module Vintage
 
     attr_reader :a, :x, :y, :memory, :z, :c, :n
 
+    # TODO: MOVE INTO SOME SORT OF BUILDER PROXY
+
     def method_missing(id, *a, &b)
       return super unless id == id.upcase
       singleton_class.send(:define_method, id, *a, &b)
@@ -39,21 +43,23 @@ module Vintage
     end
 
     def x=(new_x)
-      @x = normalize(new_x)
+      set(:x, new_x)
     end
 
     def y=(new_y)
-      @y = normalize(new_y)
+      set(:y, new_y)
     end
 
     def a=(new_a)
-      @a = normalize(new_a) 
+      set(:a, new_a)
     end
 
     def normalize(number)
-      number %= 256
+      number &= 0xff
       number == 0 ? @z = 1 : @z = 0
       @n = number[7]
+      
+      (@c = yield ? 1 : 0) if block_given?
 
       number
     end
@@ -82,29 +88,25 @@ module Vintage
 
     private
 
-    def add(value)
-      t = @a + value + @c
+    def set(key, value, &block)
+      raise ArgumentError unless [:a, :x, :y].include?(key) || key.respond_to?(:value=)
 
-      @n   = @a[7]
-      @z   = (t == 0 ? 1 : 0)
+      t = normalize(value, &block)
 
-      @c   = t > 255 ? 1 : 0
-      @a = t % 256
+      if Symbol === key 
+        instance_variable_set("@#{key}", t)
+      else
+        m.value = t
+      end
     end
 
-    def subtract(value)
-      t  = a - value - (@c == 0 ? 1 : 0)
-
-      @n = t[7]
-      @z = (t == 0 ? 1 : 0)
-
-      @c = (t >= 0 ? 1 : 0)
-      @a = t % 256
-    end
+    # FIXME: Extract into Storage object 
 
     def jump
       @memory.program_counter = m.address
     end
+
+    # FIXME: Extract into Storage object 
 
     def jsr
       low, high = bytes(@memory.program_counter)
@@ -115,6 +117,8 @@ module Vintage
       jump
     end
 
+    # FIXME: Extract into Storage object 
+
     def rts
       h = pull
       l = pull
@@ -122,24 +126,14 @@ module Vintage
       @memory.program_counter = int16([l, h])
     end
 
-    def lsr
-      @n  = 0
-      @c  = a[0]
-      @a  = (a >> 1) % 127
-      @z  = (@a == 0 ? 1 : 0)
-    end
-    
-    def bit(value)
-      bits = (a & value)
-      
-      bits.zero? ? @z = 1 : @z = 0
-      @n = bits[7]
-    end
+    # FIXME: Extract into Storage object 
 
     def push(value)
       @memory[STACK_OFFSET + @sp] = value
       @sp -= 1
     end
+
+    # FIXME: Extract into Storage object 
 
     def pull
       @sp += 1
@@ -147,12 +141,10 @@ module Vintage
       @memory[STACK_OFFSET + @sp]
     end
 
-    def compare(a,b)
-      t  = a - b
+    # ... consider moving these helpers elsewehere...
 
-      @n = t[7]
-      @c = a >= b ? 1 : 0
-      @z = (t == 0 ? 1 : 0)
+    def compare(a,b)
+      normalize(a - b) { a >= b }
     end
 
     def branch(test)
