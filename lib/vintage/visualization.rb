@@ -2,7 +2,7 @@ module Vintage
   class Visualization
     include Java
     
-    SCALE = 12
+    SCALE = 24
     DIMENSIONS = 32
 
     import java.awt.Color

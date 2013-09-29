@@ -10,8 +10,12 @@ module Vintage
 
       mem.extend(MemoryMap)
       mem.ui = ui
+      
+      mem.load(File.binread(file).unpack("C*"))
 
-      new(mem, cpu).run(File.binread(file).unpack("C*"))
+      sim = new(mem, cpu)
+
+      loop { sim.step } 
     end
 
     def initialize(mem, cpu)
@@ -24,16 +28,8 @@ module Vintage
 
     attr_reader :mem, :cpu, :ref
 
-    def run(bytecode)
-      mem.load(bytecode)
-
-      loop { execute(mem.next) } 
-    end
-
-    def execute(code)
-      raise StopIteration unless code
-
-      name, mode = @codes[code]
+    def step
+      name, mode = @codes[mem.next]
 
       if name
         @ref = Reference.new(cpu, mem, mode)
