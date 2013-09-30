@@ -42,7 +42,7 @@ module Vintage
         l = @mem[m + @cpu[:x]]
         h = @mem[m + @cpu[:x] + 1]
 
-       int16([l, h])
+       @mem.int16([l, h])
       when "IY"
         m = @mem.next
 
