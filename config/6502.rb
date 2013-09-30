@@ -19,14 +19,14 @@ INC { ref.value = cpu.result(ref.value + 1) }
 CPX { cpu.compare(cpu[:x], ref.value) }
 CMP { cpu.compare(cpu[:a], ref.value) }
 
-BNE { mem.branch(cpu[:z] == 0, ref) }
-BEQ { mem.branch(cpu[:z] == 1, ref) }
-BPL { mem.branch(cpu[:n] == 0, ref) }
-BCS { mem.branch(cpu[:c] == 1, ref) }
-BCC { mem.branch(cpu[:c] == 0, ref) }
+BNE { mem.branch(cpu[:z] == 0, ref.address) }
+BEQ { mem.branch(cpu[:z] == 1, ref.address) }
+BPL { mem.branch(cpu[:n] == 0, ref.address) }
+BCS { mem.branch(cpu[:c] == 1, ref.address) }
+BCC { mem.branch(cpu[:c] == 0, ref.address) }
 
-JMP { mem.jump(ref) }
-JSR { mem.jsr(ref) }
+JMP { mem.jump(ref.address) }
+JSR { mem.jsr(ref.address) }
 RTS { mem.rts }
 
 AND { cpu[:a] &= ref.value }

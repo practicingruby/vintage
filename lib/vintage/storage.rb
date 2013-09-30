@@ -38,15 +38,13 @@ module Vintage
       n == 1 ? bytes.first : bytes
     end
 
-    def jump(m)
-      @program_counter = m.address
+    def jump(address)
+      @program_counter = address
     end
 
-    def branch(test, ref)
+    def branch(test, offset)
       return unless test
 
-      offset = ref.address
-       
       if offset <= 0x80
         @program_counter += offset
       else
@@ -54,13 +52,13 @@ module Vintage
       end
     end
 
-    def jsr(m)
+    def jsr(address)
       low, high = bytes(@program_counter)
 
       push(low)
       push(high)
 
-      jump(m)
+      jump(address)
     end
 
     # FIXME: Extract into Storage object 
