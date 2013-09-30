@@ -1,7 +1,5 @@
 module Vintage
   class Reference
-    include NumericHelpers
-
     def initialize(cpu, mem, mode)
       @cpu  = cpu
       @mem  = mem
@@ -51,11 +49,11 @@ module Vintage
         l = @mem[m]
         h = @mem[m + 1]
 
-        int16([l,h]) + @cpu[:y]
+        @mem.int16([l,h]) + @cpu[:y]
       when "AB"
-        int16(@mem.next(2))
+        @mem.int16(@mem.next(2))
       when "AY"
-        int16(@mem.next(2)) + @cpu[:y]
+        @mem.int16(@mem.next(2)) + @cpu[:y]
       when "#"
         # do nothing
       else
