@@ -1,9 +1,14 @@
+#!/usr/bin/env ruby
+
 require "csv"
 require "set"
 
+# FIXME: Move this up into lib/ after cleaning it up / reducing duplication w.
+# existing functionality in lib/ 
+
 module Vintage
   class Disassembler
-    CONFIG_DIR = "#{File.dirname(__FILE__)}/../../config"
+    CONFIG_DIR = "#{File.dirname(__FILE__)}/../config"
 
     def initialize(file)
       @bytes      = File.binread(file).bytes
@@ -73,3 +78,5 @@ module Vintage
     end
   end
 end
+
+Vintage::Disassembler.new(ARGV[0]).display_source

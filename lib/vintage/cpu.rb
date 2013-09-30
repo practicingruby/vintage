@@ -15,11 +15,6 @@ module Vintage
       @registers[key] = result(value)
     end
 
-    def compare(a, b)
-      result(a - b)
-      update_carry { a >= b }
-    end
-
     def set_carry
       @flags[:c] = 1
     end
@@ -28,7 +23,7 @@ module Vintage
       @flags[:c] = 0
     end
 
-    def update_carry
+    def carry_if
       yield ? set_carry : clear_carry
     end
 

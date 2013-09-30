@@ -6,12 +6,10 @@ module Vintage
     include NumericHelpers
 
     def initialize
-      @memory          = Hash.new(0)
-      @program_counter = PROGRAM_OFFSET
-      @sp              = 255
+      @memory = Hash.new(0)
+      @pos    = PROGRAM_OFFSET
+      @sp     = 255
     end
-
-    attr_accessor :program_counter
 
     def load(bytecode)
       index = PROGRAM_OFFSET
@@ -31,29 +29,29 @@ module Vintage
       bytes = []
 
       n.times do
-        bytes << @memory[@program_counter]
-        @program_counter += 1
+        bytes << @memory[@pos]
+        @pos += 1
       end
 
       n == 1 ? bytes.first : bytes
     end
 
     def jump(address)
-      @program_counter = address
+      @pos = address
     end
 
     def branch(test, offset)
       return unless test
 
       if offset <= 0x80
-        @program_counter += offset
+        @pos += offset
       else
-        @program_counter -= (0xff - offset + 1)
+        @pos -= (0xff - offset + 1)
       end
     end
 
     def jsr(address)
-      low, high = bytes(@program_counter)
+      low, high = bytes(@pos)
 
       push(low)
       push(high)
@@ -61,21 +59,17 @@ module Vintage
       jump(address)
     end
 
-    # FIXME: Extract into Storage object 
-
     def rts
       h = pull
       l = pull
 
-      @program_counter = int16([l, h])
+      @pos = int16([l, h])
     end
 
     def push(value)
       @memory[STACK_OFFSET + @sp] = value
       @sp -= 1
     end
-
-    # FIXME: Extract into Storage object 
 
     def pull
       @sp += 1

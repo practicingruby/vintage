@@ -64,7 +64,7 @@ module Vintage
       @last_keypress = 0
       
       @panel.setPreferredSize(Dimension.new(SCALE * DIMENSIONS,
-                                           SCALE * DIMENSIONS))
+                                            SCALE * DIMENSIONS))
 
       @panel.setFocusable(true)
       
@@ -104,7 +104,6 @@ module Vintage
 
       bg.setColor(Color.black)
       bg.fillRect(0,0, img.getWidth, img.getHeight)
-      @new = false
 
       @pixels.each do |pixel|
         fill_cell(bg, pixel.x, pixel.y, pixel.color)
@@ -114,5 +113,4 @@ module Vintage
       bg.dispose
     end
   end
-
 end
