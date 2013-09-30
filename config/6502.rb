@@ -6,13 +6,10 @@ LDX { cpu[:x] = ref.value }
 LDY { cpu[:y] = ref.value }
 
 STA { ref.value = cpu[:a] }
-STX { ref.value = cpu[:x] }
 
-TAX { cpu[:x] = cpu[:a] }
 TXA { cpu[:a] = cpu[:x] }
 
 INX { cpu[:x] += 1 }
-INY { cpu[:y] += 1 }
 
 DEX { cpu[:x] -= 1 }
 
@@ -20,7 +17,6 @@ DEC { ref.value = cpu.result(ref.value - 1) }
 INC { ref.value = cpu.result(ref.value + 1) } 
 
 CPX { cpu.compare(cpu[:x], ref.value) }
-CPY { cpu.compare(cpu[:y], ref.value) }
 CMP { cpu.compare(cpu[:a], ref.value) }
 
 BNE { mem.branch(cpu[:z] == 0, ref) }

@@ -11,7 +11,7 @@ module Vintage
       mem.extend(MemoryMap)
       mem.ui = ui
       
-      mem.load(File.binread(file).unpack("C*"))
+      mem.load(File.binread(file).bytes)
 
       sim = new(mem, cpu)
 
