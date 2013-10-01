@@ -10,7 +10,9 @@ module Vintage
     end
 
     def []=(key, value)
-      raise ArgumentError unless @registers.key?(key)
+      unless @registers.key?(key)
+        raise ArgumentError, "#{key.inspect} is not a register" 
+      end
 
       @registers[key] = result(value)
     end
