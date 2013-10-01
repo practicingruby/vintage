@@ -2,51 +2,39 @@ require "csv"
 
 module Vintage
   class Simulator
-    CONFIG_DIR = "#{File.dirname(__FILE__)}/../../config"
-
     def self.run(file, ui)
-      mem = Vintage::Storage.new
-      cpu = Vintage::CPU.new
+      config = Vintage::Config.new("6502")
+      cpu    = Vintage::CPU.new
+      mem    = Vintage::Storage.new
 
       mem.extend(MemoryMap)
       mem.ui = ui
       
       mem.load(File.binread(file).bytes)
 
-      sim = new(mem, cpu)
+      sim = new(mem, cpu, config)
 
       loop { sim.step } 
     end
 
-    def initialize(mem, cpu)
-      @mem = mem
-      @cpu = cpu
-
-      load_codes("#{CONFIG_DIR}/6502.csv")
-      load_definitions("#{CONFIG_DIR}/6502.rb")
+    def initialize(mem, cpu, config)
+      @mem    = mem
+      @cpu    = cpu
+      @config = config
     end
 
     attr_reader :mem, :cpu, :ref
 
     def step
-      name, mode = @codes[mem.next]
+      name, mode = @config.codes[mem.next]
 
       if name
         @ref = Reference.new(cpu, mem, mode)
 
-        instance_exec(&@definitions[name])
+        instance_exec(&@config.definitions[name])
       else
         raise LoadError, "No operator matches code: #{'%.2x' % code}"
       end
-    end
-
-    def load_codes(file)
-      @codes = Hash[CSV.read(file)
-                       .map { |r| [Integer(r[0], 16), [r[1].to_sym, r[2]]] }]
-    end
-
-    def load_definitions(file)
-      @definitions = Vintage::DSL.definitions(File.read(file))
     end
   end
 end

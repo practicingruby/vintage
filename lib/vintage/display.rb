@@ -1,5 +1,5 @@
 module Vintage
-  class Visualization
+  class Display
     include Java
     
     SCALE = 24

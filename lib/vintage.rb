@@ -1,4 +1,4 @@
-require_relative "vintage/dsl"
+require_relative "vintage/config"
 require_relative "vintage/cpu"
 require_relative "vintage/storage"
 require_relative "vintage/memory_map"
