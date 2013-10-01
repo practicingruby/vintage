@@ -1,4 +1,3 @@
-require_relative "vintage/numeric_helpers"
 require_relative "vintage/dsl"
 require_relative "vintage/cpu"
 require_relative "vintage/storage"

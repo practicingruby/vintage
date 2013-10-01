@@ -3,8 +3,6 @@ module Vintage
     PROGRAM_OFFSET = 0x0600
     STACK_OFFSET   = 0x0100
 
-    include NumericHelpers
-
     def initialize
       @memory = Hash.new(0)
       @pos    = PROGRAM_OFFSET
@@ -26,14 +24,10 @@ module Vintage
     end
 
     def next(n=1)
-      bytes = []
+      data = n.times.map { |i| @memory[@pos + i] }
+      @pos += n
 
-      n.times do
-        bytes << @memory[@pos]
-        @pos += 1
-      end
-
-      n == 1 ? bytes.first : bytes
+      n == 1 ? data.first : data
     end
 
     def jump(address)
@@ -75,6 +69,14 @@ module Vintage
       @sp += 1
 
       @memory[STACK_OFFSET + @sp]
+    end
+
+    def int16(bytes)
+      bytes.pack("c*").unpack("v").first
+    end
+
+    def bytes(num)
+      [num].pack("v").unpack("c*")
     end
   end
 end
