@@ -34,18 +34,18 @@ describe "CPU" do
 
   it "sets z=1 when a result is zero, sets z=0 otherwise" do
     cpu.result(0)
-    cpu[:z].must_equal(1)
+    expect_flags(:z => 1)
 
     cpu.result(0xcc)
-    cpu[:z].must_equal(0)
+    expect_flags(:z => 0)
   end
 
   it "sets n=1 when result is 0x80 or higher, n=0 otherwise" do
     cpu.result(rand(0x80..0xff))
-    cpu[:n].must_equal(1)
+    expect_flags(:n => 1)
 
     cpu.result(rand(0x00..0x7f))
-    cpu[:n].must_equal(0)
+    expect_flags(:n => 0)
   end
   
   it "implicitly calls result() when registers are set" do
@@ -53,23 +53,21 @@ describe "CPU" do
       cpu[e] = 0x100
       
       cpu[e].must_equal(0)
-      cpu[:z].must_equal(1)
-      cpu[:n].must_equal(0)
+      expect_flags(:z => 1, :n => 0)
 
       cpu[e] -= 1
       
       cpu[e].must_equal(0xff)
-      cpu[:z].must_equal(0)
-      cpu[:n].must_equal(1)
+      expect_flags(:z => 0, :n => 1)
     end
   end
 
   it "allows setting the c flag via set_carry and clear_carry" do
     cpu.set_carry
-    cpu[:c].must_equal(1)
+    expect_flags(:c => 1)
 
     cpu.clear_carry
-    cpu[:c].must_equal(0)
+    expect_flags(:c => 0)
   end
 
   it "allows conditionally setting the c flag via carry_if" do
@@ -77,13 +75,17 @@ describe "CPU" do
     x = 3
     cpu.carry_if { x > 1 }
 
-    cpu[:c].must_equal(1)
+    expect_flags(:c => 1)
 
     # false condition
     x = 0
     cpu.carry_if { x > 1 }
 
-    cpu[:c].must_equal(0)
+    expect_flags(:c => 0)
+  end
+
+  def expect_flags(params)
+    params.each { |k,v| cpu[k].must_equal(v) }
   end
 
  
