@@ -28,6 +28,28 @@ describe "CPU" do
     end
   end
 
+  it "allows setting the c flag via set_carry and clear_carry" do
+    cpu.set_carry
+    expect_flags(:c => 1)
+
+    cpu.clear_carry
+    expect_flags(:c => 0)
+  end
+
+  it "allows conditionally setting the c flag via carry_if" do
+    # true condition
+    x = 3
+    cpu.carry_if { x > 1 }
+
+    expect_flags(:c => 1)
+
+    # false condition
+    x = 0
+    cpu.carry_if { x > 1 }
+
+    expect_flags(:c => 0)
+  end
+
   it "truncates results to fit in a single byte" do
     cpu.result(0x1337).must_equal(0x37)
   end
@@ -62,31 +84,7 @@ describe "CPU" do
     end
   end
 
-  it "allows setting the c flag via set_carry and clear_carry" do
-    cpu.set_carry
-    expect_flags(:c => 1)
-
-    cpu.clear_carry
-    expect_flags(:c => 0)
-  end
-
-  it "allows conditionally setting the c flag via carry_if" do
-    # true condition
-    x = 3
-    cpu.carry_if { x > 1 }
-
-    expect_flags(:c => 1)
-
-    # false condition
-    x = 0
-    cpu.carry_if { x > 1 }
-
-    expect_flags(:c => 0)
-  end
-
   def expect_flags(params)
     params.each { |k,v| cpu[k].must_equal(v) }
   end
-
- 
 end
