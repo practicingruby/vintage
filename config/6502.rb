@@ -3,54 +3,54 @@ BRK { raise StopIteration }     # halts execution
 
 ## Storage
 
-LDA { cpu[:a] = ref.value }
-LDX { cpu[:x] = ref.value }
-LDY { cpu[:y] = ref.value }
+LDA { cpu[:a] = mem[e] }
+LDX { cpu[:x] = mem[e] }
+LDY { cpu[:y] = mem[e] }
 
 TXA { cpu[:a] = cpu[:x] }
 
-STA { ref.value = cpu[:a] }
+STA { mem[e] = cpu[:a] }
 
 ## Counters
 
 INX { cpu[:x] += 1 }
 DEX { cpu[:x] -= 1 }
 
-DEC { ref.value = cpu.result(ref.value - 1) }
-INC { ref.value = cpu.result(ref.value + 1) } 
+DEC { mem[e] = cpu.result(mem[e] - 1) }
+INC { mem[e] = cpu.result(mem[e] + 1) } 
 
 ## Flow control
 
-JMP { mem.jump(ref.address) }
+JMP { mem.jump(e) }
 
-JSR { mem.jsr(ref.address) }
+JSR { mem.jsr(e) }
 RTS { mem.rts }
 
-BNE { mem.branch(cpu[:z] == 0, ref.address) }
-BEQ { mem.branch(cpu[:z] == 1, ref.address) }
-BPL { mem.branch(cpu[:n] == 0, ref.address) }
-BCS { mem.branch(cpu[:c] == 1, ref.address) }
-BCC { mem.branch(cpu[:c] == 0, ref.address) }
+BNE { mem.branch(cpu[:z] == 0, e) }
+BEQ { mem.branch(cpu[:z] == 1, e) }
+BPL { mem.branch(cpu[:n] == 0, e) }
+BCS { mem.branch(cpu[:c] == 1, e) }
+BCC { mem.branch(cpu[:c] == 0, e) }
 
 ## Comparisons
 
 CPX do 
-  cpu.carry_if(cpu[:x] >= ref.value)
+  cpu.carry_if(cpu[:x] >= mem[e])
 
-  cpu.result(cpu[:x] - ref.value) 
+  cpu.result(cpu[:x] - mem[e]) 
 end
 
 CMP do 
-  cpu.carry_if(cpu[:a] >= ref.value)
+  cpu.carry_if(cpu[:a] >= mem[e])
 
-  cpu.result(cpu[:a] - ref.value) 
+  cpu.result(cpu[:a] - mem[e]) 
 end
 
 
 ## Bitwise operations
 
-AND { cpu[:a] &= ref.value }
-BIT { cpu.result(cpu[:a] & ref.value) }
+AND { cpu[:a] &= mem[e] }
+BIT { cpu.result(cpu[:a] & mem[e]) }
 
 LSR do
   t = (cpu[:a] >> 1) & 0x7F
@@ -65,14 +65,14 @@ SEC { cpu.set_carry   }
 CLC { cpu.clear_carry }
 
 ADC do 
-  t = cpu[:a] + ref.value + cpu[:c]
+  t = cpu[:a] + mem[e] + cpu[:c]
 
   cpu.carry_if(t > 0xff)
   cpu[:a] = t
 end
 
 SBC do
-  t  = cpu[:a] - ref.value - (cpu[:c] == 0 ? 1 : 0)
+  t  = cpu[:a] - mem[e] - (cpu[:c] == 0 ? 1 : 0)
 
   cpu.carry_if(t >= 0)
   cpu[:a] = t

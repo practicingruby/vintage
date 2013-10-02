@@ -23,13 +23,14 @@ module Vintage
       @config = config
     end
 
-    attr_reader :mem, :cpu, :ref
+    attr_reader :mem, :cpu, :e
 
     def step
-      name, mode = @config.codes[mem.next]
+      code = mem.next
+      name, mode = @config.codes[code]
 
       if name
-        @ref = Addresser.read(mem, mode, cpu[:x], cpu[:y])
+        @e = Addresser.read(mem, mode, cpu[:x], cpu[:y])
 
         instance_exec(&@config.definitions[name])
       else
