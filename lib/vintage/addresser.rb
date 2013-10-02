@@ -4,39 +4,30 @@ module Vintage
       case mode
       when "#"
         nil
-      when "IM", "ZP", "@", "ZX", "ZP", "IX", "IY"
-        compute(mem.next, mode, mem, x, y)
-      when "AY", "AB"
-        l = mem.next
-        h = mem.next
-
-        compute(mem.int16([l, h]), mode, mem, x, y)
-      else
-        raise NotImplementedError, mode.inspect
-      end
-    end
-
-    def self.compute(value, mode, mem, x, y)
-      case mode
-      when "#"
-        nil
       when "@"
-        offset = value <= 0x80 ? value : -(0xff - value + 1)
-        mem.pos + offset
+        offset = mem.next
+
+        mem.pos + (offset <= 0x80 ? offset : -(0xff - offset + 1)) 
       when "IM"
-        mem.pos - 1
-      when "ZP", "AB"
-        value
+        mem.pos.tap { mem.next }
+      when "ZP"
+        mem.next
       when "ZX"
-        value + x
+        mem.next + x
+      when  "AB"
+        mem.int16([mem.next, mem.next])
       when "AY"
-        value + y
+        mem.int16([mem.next, mem.next]) + y
       when "IX"
+        value = mem.next
+          
         l = mem[value + x]
         h = mem[value + x + 1]
 
         mem.int16([l, h])
       when "IY"
+        value = mem.next
+
         l = mem[value]
         h = mem[value + 1]
 
