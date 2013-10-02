@@ -1,3 +1,5 @@
+require "csv"
+
 module Vintage
   class Config
     CONFIG_DIR = "#{File.dirname(__FILE__)}/../../config"

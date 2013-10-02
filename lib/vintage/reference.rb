@@ -1,10 +1,10 @@
 module Vintage
   class Reference
-    def initialize(cpu, mem, mode)
+    def initialize(x, y, mem, mode)
       @mem  = mem
       @mode = mode
 
-      @address = computed_address(cpu)
+      @address = computed_address(x, y)
     end
 
     def address
@@ -29,17 +29,23 @@ module Vintage
 
     private
 
-    def computed_address(cpu)
+    def computed_address(x, y)
       case @mode
+      when "#"
+        nil
       when "IM", "ZP", "@"
         @mem.next
       when "ZX"
-        (@mem.next + cpu[:x]) % 256
+        (@mem.next + x) % 256
+      when "AB"
+        @mem.int16(@mem.next(2))
+      when "AY"
+        @mem.int16(@mem.next(2)) + y
       when "IX"
         m = @mem.next
 
-        l = @mem[m + cpu[:x]]
-        h = @mem[m + cpu[:x] + 1]
+        l = @mem[m + x]
+        h = @mem[m + x + 1]
 
        @mem.int16([l, h])
       when "IY"
@@ -48,13 +54,7 @@ module Vintage
         l = @mem[m]
         h = @mem[m + 1]
 
-        @mem.int16([l,h]) + cpu[:y]
-      when "AB"
-        @mem.int16(@mem.next(2))
-      when "AY"
-        @mem.int16(@mem.next(2)) + cpu[:y]
-      when "#"
-        # do nothing
+        @mem.int16([l,h]) + y
       else
         raise NotImplementedError, @mode.inspect
       end
