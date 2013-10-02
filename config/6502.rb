@@ -33,13 +33,13 @@ SEC { cpu.set_carry   }
 CLC { cpu.clear_carry }
 
 CPX do 
-  cpu.carry_if { cpu[:x] >= ref.value }
+  cpu.carry_if(cpu[:x] >= ref.value)
 
   cpu.result(cpu[:x] - ref.value) 
 end
 
 CMP do 
-  cpu.carry_if { cpu[:a] >= ref.value }
+  cpu.carry_if(cpu[:a] >= ref.value)
 
   cpu.result(cpu[:a] - ref.value) 
 end
@@ -48,20 +48,20 @@ end
 LSR do
   t = (cpu[:a] >> 1) & 0x7F
  
-  cpu.carry_if { cpu[:a][0] == 1 } 
+  cpu.carry_if(cpu[:a][0] == 1)
   cpu[:a] = t
 end
 
 ADC do 
   t = cpu[:a] + ref.value + cpu[:c]
 
-  cpu.carry_if { t > 0xff }
+  cpu.carry_if(t > 0xff)
   cpu[:a] = t
 end
 
 SBC do
   t  = cpu[:a] - ref.value - (cpu[:c] == 0 ? 1 : 0)
 
-  cpu.carry_if{ t >= 0 }
+  cpu.carry_if(t >= 0)
   cpu[:a] = t
 end

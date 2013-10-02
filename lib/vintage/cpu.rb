@@ -25,8 +25,8 @@ module Vintage
       @flags[:c] = 0
     end
 
-    def carry_if
-      yield ? set_carry : clear_carry
+    def carry_if(test)
+      test ? set_carry : clear_carry
     end
 
     def result(number)

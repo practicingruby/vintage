@@ -39,13 +39,13 @@ describe "CPU" do
   it "allows conditionally setting the c flag via carry_if" do
     # true condition
     x = 3
-    cpu.carry_if { x > 1 }
+    cpu.carry_if(x > 1)
 
     expect_flags(:c => 1)
 
     # false condition
     x = 0
-    cpu.carry_if { x > 1 }
+    cpu.carry_if(x > 1)
 
     expect_flags(:c => 0)
   end
