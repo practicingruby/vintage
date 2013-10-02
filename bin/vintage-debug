@@ -68,11 +68,6 @@ module Vintage
     def int16
       [int8, int8].reverse.join
     end
-
-    def load_codes(file)
-      @codes = Hash[CSV.read(file)
-                       .map { |r| [Integer(r[0], 16), [r[1].to_sym, r[2]]] }]
-    end
   end
 end
 
