@@ -19,19 +19,13 @@ module Vintage
       when "AY"
         mem.int16([mem.next, mem.next]) + y
       when "IX"
-        value = mem.next
-          
-        l = mem[value + x]
-        h = mem[value + x + 1]
+        e = mem.next
 
-        mem.int16([l, h])
+        mem.int16([mem[e + x], mem[e + x + 1]])
       when "IY"
-        value = mem.next
+        e = mem.next
 
-        l = mem[value]
-        h = mem[value + 1]
-
-        mem.int16([l,h]) + y
+        mem.int16([mem[e], mem[e+1]]) + y
       else
         raise NotImplementedError, mode.inspect
       end
