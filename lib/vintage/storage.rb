@@ -22,7 +22,7 @@ module Vintage
     end
 
     def []=(address, value)
-      @memory[address] = value
+      @memory[address] = (value & 0xff)
     end
 
     def next
