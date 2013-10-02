@@ -3,30 +3,29 @@
 require "csv"
 require "set"
 
-# FIXME: Move this up into lib/ after cleaning it up / reducing duplication w.
-# existing functionality in lib/ 
+require_relative "../lib/vintage/config"
 
 module Vintage
   class Disassembler
-    CONFIG_DIR = "#{File.dirname(__FILE__)}/../config"
-
     def initialize(file)
       @bytes      = File.binread(file).bytes
       @pc         = 0x0600
       @operations = Set.new
       @modes      = Set.new
-
-      load_codes("#{CONFIG_DIR}/6502.csv")
+      @codes      = Vintage::Config.new("6502").codes
     end
 
     def display_source
       loop do
-        instruction, mode = @codes[@bytes.next]
+        @ins_codes = [@bytes.next]
+
+        instruction, mode = @codes[@ins_codes.first]
+        arg = argument(mode)
 
         @operations << instruction
         @modes      << mode
 
-        puts ["%.4x:" % @pc, instruction, argument(mode)].join(" ")
+        puts ["%.4x:" % @pc, @ins_codes.map { |e| '%.2x' %  e }.join(" ").ljust(8) + "  ", instruction, arg].join(" ")
         @pc += 1
       end
 
@@ -62,14 +61,12 @@ module Vintage
 
     def int8
       @pc += 1
-      '%.2x' % @bytes.next
+      @ins_codes << @bytes.next
+      '%.2x' % @ins_codes.last
     end
 
     def int16
-      l = int8
-      h = int8
-
-      [h,l].join
+      [int8, int8].reverse.join
     end
 
     def load_codes(file)
