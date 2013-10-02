@@ -9,6 +9,8 @@ module Vintage
       @sp     = 255
     end
 
+    attr_reader :pos
+
     def load(bytecode)
       index = PROGRAM_OFFSET
 
@@ -23,25 +25,18 @@ module Vintage
       @memory[address] = value
     end
 
-    def next(n=1)
-      data = n.times.map { |i| @memory[@pos + i] }
-      @pos += n
-
-      n == 1 ? data.first : data
+    def next
+      @memory[@pos].tap { @pos += 1 }
     end
 
     def jump(address)
       @pos = address
     end
 
-    def branch(test, offset)
+    def branch(test, address)
       return unless test
 
-      if offset <= 0x80
-        @pos += offset
-      else
-        @pos -= (0xff - offset + 1)
-      end
+      @pos = address
     end
 
     def jsr(address)

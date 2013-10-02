@@ -29,7 +29,7 @@ module Vintage
       name, mode = @config.codes[mem.next]
 
       if name
-        @ref = Reference.new(cpu[:x], cpu[:y], mem, mode)
+        @ref = Addresser.read(mem, mode, cpu[:x], cpu[:y])
 
         instance_exec(&@config.definitions[name])
       else
