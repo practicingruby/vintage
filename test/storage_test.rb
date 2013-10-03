@@ -2,24 +2,29 @@ require_relative "helper"
 
 describe "Storage" do
   let(:mem) { Vintage::Storage.new }
+  let(:program_offset) { Vintage::Storage::PROGRAM_OFFSET }
 
   it "can get and set values" do
-    mem[0x01] = 0xAE
+    mem[0x1337] = 0xAE
 
-    mem[0x01].must_equal(0xAE)
+    mem[0x1337].must_equal(0xAE)
   end
 
-  it "can load a sequence of bytes" do
-    mem.load([0x01, 0x03, 0x05, 0x07])
+  it "can load a bytecode sequence into memory and traverse it" do
+    bytes = [0x20, 0x06, 0x06]
 
-    mem.pos.must_equal(Vintage::Storage::PROGRAM_OFFSET)
+    mem.load(bytes)
+    mem.pc.must_equal(program_offset)
 
-    mem.next.must_equal(0x01)
-    mem.next.must_equal(0x03)
-    mem.next.must_equal(0x05)
-    mem.next.must_equal(0x07)
+    bytes.each { |b| mem.next.must_equal(b) }
 
-    mem.pos.must_equal(Vintage::Storage::PROGRAM_OFFSET + 4)
+    mem.pc.must_equal(program_offset + 3)
+  end
+
+  it "sets an initial pcition of $0600" do
+    program_offset.must_equal(0x0600)
+
+    mem.pc.must_equal(program_offset)
   end
 
   it "returns zero by default" do
@@ -43,36 +48,30 @@ describe "Storage" do
   end
 
   it "implements jump" do
-    starting_pos = mem.pos
+    mem.jump(program_offset + 0xAB)
 
-    mem.jump(starting_pos + 2)
-
-    mem.pos.must_equal(starting_pos + 2)
+    mem.pc.must_equal(program_offset + 0xAB)
   end
 
   it "implements jsr/rts" do
-    starting_pos = mem.pos
+    mem.jsr(program_offset + 0xAB)
 
-    mem.jsr(Vintage::Storage::PROGRAM_OFFSET + 3)
-
-    mem.pos.must_equal(starting_pos + 3)
+    mem.pc.must_equal(program_offset + 0xAB)
 
     mem.rts
-    mem.pos.must_equal(starting_pos)
+    mem.pc.must_equal(program_offset)
   end
 
   it "implements conditional branching" do
-    starting_pos = mem.pos
-
     x = 1
-    mem.branch(x > 2, mem.pos + 5)
+    mem.branch(x > 2, program_offset + 5)
 
-    mem.pos.must_equal(starting_pos)
+    mem.pc.must_equal(program_offset)
 
     x = 3
-    mem.branch(x > 2, mem.pos + 5)
+    mem.branch(x > 2, program_offset + 5)
 
-    mem.pos.must_equal(starting_pos + 5)
+    mem.pc.must_equal(program_offset + 5)
   end
 
   it "can convert two bytes into a 16 bit integer" do

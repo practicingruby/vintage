@@ -5,16 +5,16 @@ module Vintage
 
     def initialize
       @memory = Hash.new(0)
-      @pos    = PROGRAM_OFFSET
+      @pc     = PROGRAM_OFFSET
       @sp     = 255
     end
 
-    attr_reader :pos
+    attr_reader :pc
 
-    def load(bytecode)
+    def load(bytes)
       index = PROGRAM_OFFSET
 
-      bytecode.each_with_index { |c,i| @memory[index+i] = c }
+      bytes.each_with_index { |c,i| @memory[index+i] = c }
     end
 
     def [](address)
@@ -26,21 +26,21 @@ module Vintage
     end
 
     def next
-      @memory[@pos].tap { @pos += 1 }
+      @memory[@pc].tap { @pc += 1 }
     end
 
     def jump(address)
-      @pos = address
+      @pc = address
     end
 
     def branch(test, address)
       return unless test
 
-      @pos = address
+      @pc = address
     end
 
     def jsr(address)
-      low, high = bytes(@pos)
+      low, high = bytes(@pc)
 
       push(low)
       push(high)
@@ -52,7 +52,7 @@ module Vintage
       h = pull
       l = pull
 
-      @pos = int16([l, h])
+      @pc = int16([l, h])
     end
 
     def push(value)
