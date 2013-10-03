@@ -16,8 +16,8 @@ STA { mem[e] = cpu[:a] }
 INX { cpu[:x] += 1 }
 DEX { cpu[:x] -= 1 }
 
-DEC { mem[e] = cpu.result(mem[e] - 1) }
-INC { mem[e] = cpu.result(mem[e] + 1) } 
+DEC { cpu.result( mem[e] -= 1 ) }
+INC { cpu.result( mem[e] += 1 ) } 
 
 ## Flow control
 
@@ -37,20 +37,20 @@ BCC { mem.branch(cpu[:c] == 0, e) }
 CPX do 
   cpu.carry_if(cpu[:x] >= mem[e])
 
-  cpu.result(cpu[:x] - mem[e]) 
+  cpu.result( cpu[:x] - mem[e] )
 end
 
 CMP do 
   cpu.carry_if(cpu[:a] >= mem[e])
 
-  cpu.result(cpu[:a] - mem[e]) 
+  cpu.result( cpu[:a] - mem[e] )
 end
 
 
 ## Bitwise operations
 
 AND { cpu[:a] &= mem[e] }
-BIT { cpu.result(cpu[:a] & mem[e]) }
+BIT { cpu.result( cpu[:a] & mem[e] ) }
 
 LSR do
   t = (cpu[:a] >> 1) & 0x7F

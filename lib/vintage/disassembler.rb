@@ -14,6 +14,9 @@ module Vintage
     end
 
     def display_source
+      puts "address  hexdump     assembly "
+      puts "------------------------------"
+
       loop do
         @instruction.clear
 
@@ -23,12 +26,12 @@ module Vintage
         asm = assembly_dump(next_byte)
         ins = instruction_dump
 
-        puts [adr, ins, asm].join(" ")
+        puts "#{adr}    #{ins}    #{asm}"
       end
     end
 
     def address_dump
-      '%.4x:' % @pc
+      '$%.4x' % @pc
     end
 
     def assembly_dump(code)
@@ -61,7 +64,7 @@ module Vintage
     end
 
     def instruction_dump
-      @instruction.map { |e| '%.2x' % e }.join(" ").ljust(10)
+      @instruction.map { |e| '%.2x' % e }.join(" ").ljust(8)
     end
 
     def next_byte
