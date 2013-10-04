@@ -2,14 +2,15 @@ module Vintage
   class Storage
     PROGRAM_OFFSET = 0x0600
     STACK_OFFSET   = 0x0100
+    STACK_ORIGIN   = 0xff
 
     def initialize
       @memory = Hash.new(0)
       @pc     = PROGRAM_OFFSET
-      @sp     = 255
+      @sp     = STACK_ORIGIN
     end
 
-    attr_reader :pc
+    attr_reader :pc, :sp
 
     def load(bytes)
       index = PROGRAM_OFFSET

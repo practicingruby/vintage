@@ -14,7 +14,7 @@ describe "Storage" do
     bytes = [0x20, 0x06, 0x06]
 
     mem.load(bytes)
-    mem.pc.must_equal(program_offset)
+    mem.pc.must_equal(program_offset) # load() does not increment counter
 
     bytes.each { |b| mem.next.must_equal(b) }
 
@@ -28,23 +28,37 @@ describe "Storage" do
   end
 
   it "returns zero by default" do
-    mem[0x01].must_equal(0)
+    mem[0x0101].must_equal(0)
   end
 
   it "truncates the values to fit in one byte" do
-    mem[0x01] = 0x1337
+    mem[0x0101] = 0x1337
 
-    mem[0x01].must_equal(0x37)
+    mem[0x0101].must_equal(0x37)
+  end
+
+  let(:stack_origin) { Vintage::Storage::STACK_ORIGIN }
+  let(:stack_offset) { Vintage::Storage::STACK_OFFSET }
+
+  it "has a 256 element stack between 0x0100-0x01ff" do
+    stack_offset.must_equal(0x0100)
+    stack_origin.must_equal(0xff) # this value gets added to the offset
   end
 
   it "implements stack-like behavior" do
+    mem.sp.must_equal(stack_origin)
+
     mem.push(0x01)
     mem.push(0x03)
     mem.push(0x05)
 
+    mem.sp.must_equal(stack_origin - 3)
+
     mem.pull.must_equal(0x05)
     mem.pull.must_equal(0x03)
     mem.pull.must_equal(0x01)
+
+    mem.sp.must_equal(stack_origin)
   end
 
   it "implements jump" do
@@ -54,23 +68,28 @@ describe "Storage" do
   end
 
   it "implements jsr/rts" do
-    mem.jsr(program_offset + 0xAB)
+    mem.jsr(0x0606)
+    mem.jsr(0x060d)
 
-    mem.pc.must_equal(program_offset + 0xAB)
+    mem.pc.must_equal(0x060d)
+
+    mem.rts
+    mem.pc.must_equal(0x0606)
 
     mem.rts
     mem.pc.must_equal(program_offset)
   end
 
   it "implements conditional branching" do
-    x = 1
-    mem.branch(x > 2, program_offset + 5)
+    big   = 0xAB
+    small = 0x01
 
+    # a false condition does not affect mem.pc
+    mem.branch(small > big, program_offset + 5)
     mem.pc.must_equal(program_offset)
 
-    x = 3
-    mem.branch(x > 2, program_offset + 5)
-
+    # true condition jumps to the provided address
+    mem.branch(big > small, program_offset + 5)
     mem.pc.must_equal(program_offset + 5)
   end
 
