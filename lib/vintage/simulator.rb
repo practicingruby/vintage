@@ -1,7 +1,7 @@
-require "csv"
-
 module Vintage
   class Simulator
+    EvaluationContext = Struct.new(:mem, :cpu, :e)
+      
     def self.run(file, ui)
       config = Vintage::Config.new("6502")
       cpu    = Vintage::CPU.new
@@ -12,29 +12,18 @@ module Vintage
       
       mem.load(File.binread(file).bytes)
 
-      sim = new(mem, cpu, config)
+      loop do
+        code = mem.next
 
-      loop { sim.step } 
-    end
+        name, mode = config.codes[code]
+        if name
+          e = Operand.read(mem, mode, cpu[:x], cpu[:y])
 
-    def initialize(mem, cpu, config)
-      @mem    = mem
-      @cpu    = cpu
-      @config = config
-    end
-
-    attr_reader :mem, :cpu, :e
-
-    def step
-      code = mem.next
-      name, mode = @config.codes[code]
-
-      if name
-        @e = Operand.read(mem, mode, cpu[:x], cpu[:y])
-
-        instance_exec(&@config.definitions[name])
-      else
-        raise LoadError, "No operator matches code: #{'%.2x' % code}"
+          EvaluationContext.new(mem, cpu, e)
+                           .instance_exec(&config.definitions[name])
+        else
+          raise LoadError, "No operator matches code: #{'%.2x' % code}"
+        end
       end
     end
   end

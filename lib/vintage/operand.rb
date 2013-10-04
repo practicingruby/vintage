@@ -2,27 +2,25 @@ module Vintage
   module Operand
     def self.read(mem, mode, x, y)
       case mode
-      when "#"
+      when "#" # Implicit 
         nil
-      when "@"
+      when "@" # Relative
         offset = mem.next
 
         mem.pc + (offset <= 0x80 ? offset : -(0xff - offset + 1)) 
-      when "IM"
+      when "IM" # Immediate
         mem.pc.tap { mem.next }
-      when "ZP"
+      when "ZP" # Zero Page
         mem.next
-      when "ZX"
+      when "ZX" # Zero Page, X
         mem.next + x
-      when  "AB"
+      when  "AB" # Absolute
         mem.int16([mem.next, mem.next])
-      when "AY"
-        mem.int16([mem.next, mem.next]) + y
-      when "IX"
+      when "IX" # Indexed Indirect
         e = mem.next
 
         mem.int16([mem[e + x], mem[e + x + 1]])
-      when "IY"
+      when "IY" # Indirect Indexed
         e = mem.next
 
         mem.int16([mem[e], mem[e+1]]) + y
