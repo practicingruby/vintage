@@ -3,7 +3,7 @@ module Vintage
     EvaluationContext = Struct.new(:mem, :cpu, :e)
       
     def self.run(file, ui)
-      config = Vintage::Config.new("6502")
+      config = Vintage::Config.new
       cpu    = Vintage::CPU.new
       mem    = Vintage::Storage.new
 
