@@ -15,14 +15,14 @@ module Vintage
       loop do
         code = mem.next
 
-        name, mode = config.codes[code]
+        op, mode = config.codes[code]
         if name
           e = Operand.read(mem, mode, cpu[:x], cpu[:y])
 
           EvaluationContext.new(mem, cpu, e)
-                           .instance_exec(&config.definitions[name])
+                           .instance_exec(&config.definitions[op])
         else
-          raise LoadError, "No operator matches code: #{'%.2x' % code}"
+          raise LoadError, "No operation matches code: #{'%.2x' % code}"
         end
       end
     end
