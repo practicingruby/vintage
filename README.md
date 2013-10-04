@@ -1,11 +1,16 @@
-Possibly a 6502 emulator
+Partial 6502 simulator heavily inspired by Nick Morgan's 
+[Easy6502](https://github.com/skilldrick/easy6502) tutorial.
 
-![](http://i.imgur.com/0DsKeoy.gif)
+No dependencies are required other than JRuby.
 
-## Resources
+To play a game of Snake6502, run:
 
-* [Instructions](http://www.6502.org/tutorials/6502opcodes.html)
-* [Registers + Flags](http://www.obelisk.demon.co.uk/6502/registers.html)
-* [Syntax Definitions](http://e-tradition.net/bytes/6502/assembler.html)
-* [General guide](http://homepage.ntlworld.com/cyborgsystems/CS_Main/6502/6502.htm#JSR)
-* [A more complete Ruby implementation](https://github.com/joelanders/r6502)
+    $ ruby bin/vintage examples/snake.rom
+
+To disassemble the bytecode for the game, run:
+
+    $ ruby bin/vintage-debug examples/snake.rom
+
+All credit goes to Nick Morgan for the Snake6502 program. I didn't write it!
+But if you have any questions about the Vintage simulator, please 
+contact gregory@practicingruby.com.
